@@ -1,7 +1,7 @@
-# bash completion for dhcp-dns-tools
+# bash completion for ddt
 
-have dhcp-dns-tools &&
-_dhcp_dns_tools() {
+have ddt &&
+_ddt() {
    local cur prev
 
    COMPREPLY=()
@@ -11,17 +11,17 @@ _dhcp_dns_tools() {
 
    case $prev in
       -b|--bootp)
-         local showlist=$(dhcp-dns-tools show-pxe --no-header|awk '{print $1}')
+         local showlist=$(ddt show-pxe --no-header|awk '{print $1}')
          COMPREPLY=($(compgen -W "${showlist}" -- "$cur"))
          return 0
          ;;
       -d|--domainset)
-         local showlist=$(dhcp-dns-tools show-domainset --no-header|awk '{print $1}')
+         local showlist=$(ddt show-domainset --no-header|awk '{print $1}')
          COMPREPLY=($(compgen -W "${showlist}" -- "$cur"))
          return 0
          ;;
       -p|--pool)
-         local showlist=$(dhcp-dns-tools show-pool --no-header|awk '{print $1}')
+         local showlist=$(ddt show-pool --no-header|awk '{print $1}')
          COMPREPLY=($(compgen -W "${showlist}" -- "$cur"))
          return 0
          ;;
@@ -30,7 +30,7 @@ _dhcp_dns_tools() {
          return 0
          ;;
       -t|--tag)
-         local showlist=$(dhcp-dns-tools show-tag --no-header|awk '{print $1}')
+         local showlist=$(ddt show-tag --no-header|awk '{print $1}')
          COMPREPLY=($(compgen -W "${showlist}" -- "$cur"))
          return 0
          ;;
@@ -38,26 +38,9 @@ _dhcp_dns_tools() {
 
    if [[ "$cur" == '-*' || $COMP_CWORD -gt 1 ]]
    then
-      COMPREPLY=($(compgen -W "$(dhcp-dns-tools help|grep "^ dhcp-dns-tools ${COMP_WORDS[1]}"|sed -e 's/[\[]/\n/g;'|grep -- '^-'|cut -f 1 -d ']'|cut -f 1 -d ' '|sed -e 's/|/ /g;'|xargs echo -n)" -- "$cur"))
+      COMPREPLY=($(compgen -W "$(ddt help|grep "^ ddt ${COMP_WORDS[1]}"|sed -e 's/[\[]/\n/g;'|grep -- '^-'|cut -f 1 -d ']'|cut -f 1 -d ' '|sed -e 's/|/ /g;'|xargs echo -n)" -- "$cur"))
    else
-      COMPREPLY=($(compgen -W "$($(which dhcp-dns-tools||echo /usr/local/bin/dhcp-dns-tools) help|grep '^ dhcp-dns-tools'|awk '{print $2}'|xargs echo -n)" -- "$cur"))
+      COMPREPLY=($(compgen -W "$($(which ddt||echo /usr/local/bin/ddt) help|grep '^ ddt'|awk '{print $2}'|xargs echo -n)" -- "$cur"))
    fi
 
-#   if [[ "$cur" == -* ]]; then
-#      COMPREPLY=( $( compgen -W '-h -d -i -p -m -c' -- "$cur" ) )
-#   else
-#      COMPREPLY=( $( compgen -W 'add_alias add_dhcp add_float add_static add_virtual \
-#         create_pool \
-#         change_mac change_ip change_host change_comment change_tag change_domainset \
-#         del_pc del_float \
-#         disable_pc disable_float enable_pc enable_float \
-#         gen_dhcp_file gen_dns_file check_dns \
-#         load_database \
-#         create_domainset show_domainset \
-#         create_pxe remove_pxe show_pxe enable_pxe disable_pxe \
-#         create_tag remove_tag show_tag \
-#         show search_mac \
-#         help' -- "$cur" ) )
-#   fi
-
-   } && complete -F _dhcp_dns_tools dhcp-dns-tools
+   } && complete -F _dhcp_dns_tools ddt
