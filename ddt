@@ -1,0 +1,3091 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
+# License GNU GPL version 2 or later and Perl equivalent
+
+package DDT::RE;
+
+use strict;
+#use warnings;
+
+use Readonly;
+
+Readonly our $MAC_ADDRESS  => qr{ (?: [0-9A-F]{2} :){5} [0-9A-F]{2} }xms;
+Readonly our $IPv4_ADDRESS => qr{ [0-9]{1,3} \. [0-9]{1,3} \. [0-9]{1,3} \. [0-9]{1,3} }xms;
+
+
+package main;
+
+use strict;
+#use warnings;
+use version; our $VERSION = qv('0.9.2');
+
+use Getopt::Long qw(GetOptions);
+#use YAML;
+use YAML::Syck;
+use Net::Netmask;
+use File::Touch;
+use File::Copy;
+use Socket;
+
+my $command = shift @ARGV || 'help';
+
+my %cmd_db = (
+   'add-alias'          => \&cmd_add_alias,
+   'add-dhcp'           => \&cmd_add_dhcp,
+   'add-float'          => \&cmd_add_float,
+   'add-static'         => \&cmd_add_static,
+   'add-virtual'        => \&cmd_add_virtual,
+   'change-comment'     => \&cmd_change_comment,
+   'change-domainset'   => \&cmd_change_domainset,
+   'change-host'        => \&cmd_change_host,
+   'change-ip'          => \&cmd_change_ip,
+   'change-mac'         => \&cmd_change_mac,
+   'change-tag'         => \&cmd_change_tag,
+   'check-dns'          => \&cmd_check_dns,
+   'create-domainset'   => \&cmd_create_domainset,
+   'create-pool'        => \&cmd_create_pool,
+   'create-pxe'         => \&cmd_create_pxe,
+   'create-tag'         => \&cmd_create_tag,
+   'del-pc'             => \&cmd_del_pc,
+   'del-float'          => \&cmd_del_float,
+   'disable-pc'         => \&cmd_disable_pc,
+   'disable-float'      => \&cmd_disable_float,
+   'disable-pxe'        => \&cmd_disable_pxe,
+   'enable-pc'          => \&cmd_enable_pc,
+   'enable-float'       => \&cmd_enable_float,
+   'enable-pxe'         => \&cmd_enable_pxe,
+   'gen-dhcp-file'      => \&cmd_generate_dhcp_file,
+   'gen-dns-file'       => \&cmd_generate_dns_file,
+   'help'               => \&cmd_help,
+   'load-database'      => \&cmd_load_database,
+   'remove-pxe'         => \&cmd_remove_pxe,
+   'remove-tag'         => \&cmd_remove_tag,
+   'search-mac'         => \&cmd_search_mac,
+   'show'               => \&cmd_show_host,
+   'show-domainset'     => \&cmd_show_domainset,
+   'show-pool'          => \&cmd_show_pool,
+   'show-pxe'           => \&cmd_show_pxe,
+   'show-tag'           => \&cmd_show_tag,
+   'upgrade-db'         => \&cmd_upgrade_db,
+   'version'            => \&cmd_version,
+   );
+
+#-------------------------------------------------------------------------------
+
+my $CONFIG;
+
+my $xdg_config_home = $ENV{'XDG_CONFIG_HOME'} || "$ENV{'HOME'}/.config";
+$CONFIG = YAML::Syck::LoadFile("$xdg_config_home/ddt/config.yml") if -e "$xdg_config_home/ddt/config.yml";
+
+my $COMPUTER_BASENAME   = $CONFIG->{'database'}{'basename'} || 'ddt';
+my $COMPUTER_EXT        = $CONFIG->{'database'}{'ext'}      || 'db';
+
+my $FOLDER_APP          = $CONFIG->{'database'}{'folder'}   || '/var/lib/ddt';
+my $FOLDER_BACKUP       = $CONFIG->{'database'}{'backup'}   || "$FOLDER_APP/backup";
+my $FOLDER_GEN_DHCP     = $CONFIG->{'generate'}{'dhcp'}     || "$FOLDER_APP/dhcp";
+my $FOLDER_GEN_DNS      = $CONFIG->{'generate'}{'dns'}      || "$FOLDER_APP/dns";
+my $SCRIPT_UPDATE       = $CONFIG->{'script'}{'update'}     || '/usr/share/ddt/update-dhcp-server';
+
+my $COMPUTER_YAML       = "$FOLDER_APP/$COMPUTER_BASENAME.$COMPUTER_EXT";
+
+#-------------------------------------------------------------------------------
+
+mkdir $FOLDER_APP, 0755      if not -d $FOLDER_APP;
+mkdir $FOLDER_BACKUP, 0755   if not -d $FOLDER_BACKUP;
+mkdir $FOLDER_GEN_DHCP, 0755 if not -d $FOLDER_GEN_DHCP;
+mkdir $FOLDER_GEN_DNS, 0755  if not -d $FOLDER_GEN_DNS;
+
+touch $COMPUTER_YAML if not -e $COMPUTER_YAML;
+
+my $COMPUTER_DB = YAML::Syck::LoadFile($COMPUTER_YAML);
+
+if (defined $cmd_db{$command}) {
+   $cmd_db{$command}->(@ARGV);
+   }
+else {
+   print {*STDERR} "ddt: command $command not found\n\n";
+   $cmd_db{'help'}->();
+   exit 1;
+   }
+
+exit;
+
+#--------------------------------------------------------------------------------
+# CONTROL section
+#--------------------------------------------------------------------------------
+
+sub control_exist_pool {
+   my ($COMPUTER_DB, $pool) = @_;
+
+   return exists $COMPUTER_DB->{'pool'}{$pool} ? 1 : 0;
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: control_exist_domainset
+#Description: controle l'existence d'un domain set dans le fichier YAML
+#             return 0 (faux) ou 1 (vrai)
+
+sub control_exist_domainset {
+   my ($COMPUTER_DB, $domainset) = @_;
+
+   return 1 if exists $COMPUTER_DB->{$domainset};
+
+   print {*STDERR} "Error: domain set $domainset not found\n";
+   return 0;
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: control_exist_hostname
+#Description: controle l'existence d'un nom de machine dans le fichier YAML
+#             return 0 (si trouvé) ou 1 (si non trouvé)
+
+sub control_exist_hostname {
+   my ($COMPUTER_DB, $domain, $hostname) = @_;
+
+   if ($COMPUTER_DB->{$domain} eq '') {
+      return 1;
+      }
+
+   my @domaindb = @{$COMPUTER_DB->{$domain}};
+
+   for my $value (@domaindb) {
+      for my $id (keys %{$value}) {
+         if ($value->{$id}->{'hostname'} eq $hostname) {
+            #print "Error: Hostname already exist: $hostname\n";
+            return 0;
+            }
+         }
+      }
+   return 1;
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: control_exist_mac
+#Description: controle l'existence d'une adresse MAC dans le fichier YAML
+#             return 0 (si trouvé) ou 1 (si non trouvé)
+
+sub control_exist_mac {
+   my ($COMPUTER_DB, $mac) = @_;
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+            if ($id eq $mac) {
+               #print "Error: Physical MAC address already exists: $mac\n";
+               return 0;
+               }
+            }
+         }
+      }
+   return 1;
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: control_exist_ip
+#Description: controle l'existence d'une adresse IP dans le fichier YAML
+#             return 0 (si trouvé) ou 1 (si non trouvé)
+
+sub control_exist_ip {
+   my ($COMPUTER_DB, $ip) = @_;
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      for my $value (@{$COMPUTER_DB->{$domain_name}}) {
+         for my $id (keys %{$value}) {
+            #print "Erreur: cette adresse IP $ip existe déjà\n";
+            return 0 if $value->{$id}{'ip'} eq $ip;
+            }
+         }
+      }
+
+   for my $current_pool (keys %{$COMPUTER_DB->{'pool'}}) {
+         #--- Cette partie pour tester les ip des pools est bonne ne plus la changer ---#
+      my @T_pool_ip = @{ $COMPUTER_DB->{'pool'}{$current_pool}{'ip'}};
+
+      for my $pool_ip (@T_pool_ip) {
+         #print "Erreur: cette adresse IP $ip existe déjà\n";
+         return 0 if $pool_ip eq $ip;
+         }
+      }
+
+   return 1;
+   }
+
+#-------------------------------------------------------------------------------------
+#Nom: control_syntaxe_mac
+#Description: controle la syntaxe d'une adresse MAC (juste la longueur pas les valeurs)
+#             return 0 (si trouvé) ou 1 (si non trouvé)
+
+sub control_syntax_mac_address {
+   my $mac = shift;
+
+   if (scalar(split /:/, $mac) == 6 and $mac =~ $DDT::RE::MAC_ADDRESS) {
+      return 1;
+      }
+
+   print {*STDERR} "Error: Bad MAC syntax: $mac\n";
+   return 0;
+   }
+
+#-------------------------------------------------------------------------------------
+#Nom: control_syntax_ip
+#Description: controle la syntaxe d'une adresse IP (juste la longueur pas les valeurs)
+#             return 0 (si trouvé) ou 1 (si non trouvé)
+
+sub control_syntax_ip {
+   my $ip = shift;
+
+   if ($ip ne 'pool') {
+      my @ip_split = split /\./, $ip;
+
+      if ( scalar(@ip_split) != 4 ) {
+         print {*STDERR} "Error: Bad IP syntax: $ip\n";
+         return 0;
+         }
+      }
+   return 1;
+   }
+
+#-------------------------------------------------------------------------------------
+
+sub control_syntax_comment {
+   my $comment = shift;
+
+   if ($comment !~ m{^20\d\d-\d\d-\d\d\s}) {
+      print {*STDERR} "Syntax Error: No date like 2014-01-10 at the beginning: $comment\n";
+      return 0;
+      }
+
+   if ($comment !~ m{\(\w+\)$}) {
+      print {*STDERR} "Syntax Error: No (SERVICE) at the end: $comment\n";
+      return 0;
+      }
+
+   if ($comment =~ m{\s\s}) {
+      print {*STDERR} "Syntax Error: Double space: $comment\n";
+      return 0;
+      }
+   return 1;
+   }
+
+#--------------------------------------------------------------------------------
+# UTILITY section
+#--------------------------------------------------------------------------------
+
+sub get_cmd_name {
+   my ($pkg, $sub) = split /::/, (caller(1))[3];
+   $sub =~ s/^cmd_//;
+   $sub =~ s/_/-/g;
+   return $sub;
+   }
+
+#-------------------------------------------------------------------------------
+
+sub normalize_mac_address {
+   my $mac_address = shift;
+
+   # D07E-28D1-7AB8 or d07e28-d17ab8
+   if ($mac_address =~ m{^ (?: [0-9A-Fa-f]{4} -){2} [0-9A-Fa-f]{4} $}xms
+      or $mac_address =~ m{^ [0-9A-Fa-f]{6} - [0-9A-Fa-f]{6} $}xms) {
+      $mac_address =~ s/-//g;
+      return join q{:}, unpack('(A2)*', uc($mac_address));
+      }
+
+   return join q{:}, map { substr( uc("00$_"), -2) } split m/ [:-] /xms, $mac_address;
+   }
+
+#-------------------------------------------------------------------------------
+
+sub normalize_comment {
+   my $comment = shift;
+
+   $comment =~ s{^(20\d\d)/(\d\d)/(\d\d)\s(.*)$}{$1-$2-$3 $4};
+
+   return $comment;
+   }
+
+#--------------------------------------------------------------------------------
+
+sub get_mac_from_hostname {
+   my ($domain, $hostname, $mac) = @_;
+
+   return $mac if $mac ne '';
+   return ''   if $hostname eq '';
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@{$COMPUTER_DB->{$domain}}) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+
+      return $mac_address;
+      }
+   }
+
+#--------------------------------------------------------------------------------
+
+sub get_mac_from_ip {
+   my ($domain, $ip, $mac) = @_;
+
+   return $mac if $mac ne '';
+   return ''   if $ip eq '';
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@{$COMPUTER_DB->{$domain}}) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+      return $mac_address;
+      }
+   }
+
+#--------------------------------------------------------------------------------
+# return a tuple (hash computer, iostat)
+# iostat 0/ok, 1/not exist
+
+sub get_computer_from_mac {
+   my ($domain, $mac) = @_;
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@{$COMPUTER_DB->{$domain}}) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+      return $attribute, 0;
+      }
+   return {}, 1;
+   }
+
+#-------------------------------------------------------------------------------
+# ADD computer section
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#Nom: add_alias
+#Description: ajoute un alias pour une machine. Pour la fonctionnalité CNAME dans le DNS.
+
+sub add_alias {
+   my ($hostname, $domainset, $alias) = @_;
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   control_exist_hostname($COMPUTER_DB, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+
+   my @domaindb = @{$COMPUTER_DB->{$domainset}};
+   my $cpt=0;
+   for my $value (@domaindb) {
+      for my $id (keys %{$value}) {
+
+         if ($value->{$id}->{'hostname'} eq $hostname) {
+            print  $value->{$id}->{'alias'};
+            $alias = $alias . ' ' . $value->{$id}->{'alias'};
+            $COMPUTER_DB->{$domainset}[$cpt]{$id}{'alias'}        = $alias;
+            $COMPUTER_DB->{$domainset}[$cpt]{$id}{'modify_time'}  = time;
+            YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+            print "Update attribute alias [OK]\n";
+            exit;
+            }
+         }
+      $cpt=$cpt+1;
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: add_static
+#Description: ajoute une machine non dhcp (donc à adressage fixe dans le fichier YAML)
+
+sub add_static {
+   my ($hostname, $domainset, $ip, $mac, $comment) = @_;
+
+   $mac = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
+   control_exist_hostname($COMPUTER_DB, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_syntax_mac_address($mac)                or exit;
+   control_exist_mac($COMPUTER_DB, $mac)            or die "Error: Physical MAC address already exists: $mac\n";
+   control_syntax_ip($ip)                          or exit;
+   control_exist_ip($COMPUTER_DB, $ip)              or die "Error: IP address already exist in domain set attachement $domainset: $ip\n";
+   control_syntax_comment($comment)                or exit;
+   my $timestamp = time;
+   push @{$COMPUTER_DB->{$domainset}}, { $mac => {
+      'hostname'     => $hostname,
+      'ip'           => $ip,
+      'address_type' => 'static',
+      'enabled'      => 'yes',
+      'create_time'  => $timestamp,
+      'modify_time'  => $timestamp,
+      'comment'      => $comment,
+      'alias'        =>  '',
+      }};
+   print "Add the computer: $hostname, IP: $ip, MAC: $mac, Domain Set: $domainset\n";
+
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+
+#-------------------------------------------------------------------------------
+#Nom: add_dhcp
+#Description: section à corriger pour prendre en compte l'ajout d'une machine dans un pool dhcp
+#--- usage: ddt add_dhcp -d legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
+
+sub add_dhcp {
+   my ($hostname, $domainset, $ip, $mac, $comment) = @_;
+
+   my $timestamp = time;
+   $mac = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   control_exist_hostname($COMPUTER_DB, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_syntax_mac_address($mac)             or exit;
+   control_exist_mac($COMPUTER_DB, $mac)         or die "Error: Physical MAC address already exists: $mac\n";
+   control_syntax_ip($ip)                       or exit;
+   control_exist_ip($COMPUTER_DB, $ip)           or die "Error: IP address already exist in domain set attachement $domainset: $ip.\n";
+   control_syntax_comment($comment)             or exit;
+
+   push @{$COMPUTER_DB->{$domainset}}, { $mac => {
+      'hostname'     => $hostname,
+      'ip'           => $ip,
+      'address_type' => 'dhcp',
+      'enabled'      => 'yes',
+      'create_time'  => $timestamp,
+      'modify_time'  => $timestamp,
+      'comment'      => $comment,
+      'alias'        => '',
+      }};
+   print "Add the computer: $hostname, IP: $ip, MAC: $mac, Domain Set: $domainset\n";
+
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+#--- usage: ddt add_float -d legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
+
+sub add_float {
+   my ($pool, $domainset, $mac, $comment) = @_;
+
+   my $timestamp = time;
+   $mac = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
+   control_exist_domainset($COMPUTER_DB, $domainset)   or exit;
+   control_syntax_mac_address($mac)                   or exit;
+   control_exist_mac($COMPUTER_DB, $mac)               or die "Error: Physical MAC address already exists: $mac\n";
+   control_exist_pool($COMPUTER_DB, $pool)             or die "Error: The pool doesn't exists: $pool\n";
+   control_syntax_comment($comment)                   or exit;
+   push @{$COMPUTER_DB->{$domainset}}, { $mac => {
+      'hostname'     => $pool,
+      'ip'           => $pool,
+      'address_type' => 'pool-dhcp',
+      'enabled'      => 'yes',
+      'create_time'  => $timestamp,
+      'modify_time'  => $timestamp,
+      'comment'      => $comment,
+      }};
+   print "Add the computer in pool MAC: $mac, Domain Set: $domainset, Pool: $pool\n";
+
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+# ADD computer section
+#-------------------------------------------------------------------------------
+
+sub cmd_add_alias {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $alias);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'alias|a=s'       => \$alias,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      or $domainset  eq ''
+      or $alias      eq '';
+
+   add_alias($hostname, $domainset, $alias);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_add_dhcp {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip, $mac, $comment);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'mac|m=s'         => \$mac,
+      'comment|c=s'     => \$comment,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      or $domainset  eq ''
+      or $ip         eq ''
+      or $mac        eq ''
+      or $comment    eq '';
+
+   add_dhcp($hostname, $domainset, $ip, $mac, $comment);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_add_float {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pool, $domainset, $mac, $comment);
+
+   GetOptions(
+      'pool|p=s'        => \$pool,
+      'domainset|d=s'   => \$domainset,
+      'mac|m=s'         => \$mac,
+      'comment|c=s'     => \$comment,
+      );
+
+   ($pool, $domainset) = split /\./, $pool, 2 if $pool =~ m/\./;
+   exit_on_error_option($help)
+      if $pool       eq ''
+      or $domainset  eq ''
+      or $mac        eq ''
+      or $comment    eq '';
+
+   add_float($pool, $domainset, $mac, $comment);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_add_static {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip, $mac, $comment);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'mac|m=s'         => \$mac,
+      'comment|c=s'     => \$comment,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      or $domainset  eq ''
+      or $ip         eq ''
+      or $mac        eq ''
+      or $comment    eq '';
+
+   add_static($hostname, $domainset, $ip, $mac, $comment);
+   }
+
+#-------------------------------------------------------------------------------
+# No real computer, just an entry A in DNS with virtual MAC
+
+sub cmd_add_virtual {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip, $comment);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'comment|c=s'     => \$comment,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      or $domainset  eq ''
+      or $ip         eq ''
+      or $comment    eq '';
+
+   $comment = normalize_comment($comment);
+   my $timestamp = time;
+
+   control_exist_domainset($COMPUTER_DB, $domainset)            or exit;
+   control_exist_hostname($COMPUTER_DB, $domainset, $hostname)  or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_syntax_ip($ip)                                      or exit;
+   control_exist_ip($COMPUTER_DB, $ip)                          or die "Error: IP address already exist in domain set attachement $domainset: $ip.\n";
+   control_syntax_comment($comment)                            or exit;
+
+   my $mac = join ':', 'FF', 'FF', map({sprintf("%02X", $_)} split(/\./, $ip));
+   control_syntax_mac_address($mac)             or exit;
+   control_exist_mac($COMPUTER_DB, $mac)         or die "Error: Virtual Physical MAC address already exists: $mac\n";
+
+   push @{$COMPUTER_DB->{$domainset}}, { $mac => {
+      'hostname'     => $hostname,
+      'ip'           => $ip,
+      'address_type' => 'static',
+      'enabled'      => 'yes',
+      'create_time'  => $timestamp,
+      'modify_time'  => $timestamp,
+      'comment'      => $comment,
+      }};
+   print "Add the virtual computer: $hostname, IP: $ip, Domain Set: $domainset\n";
+
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+# CHANGE computer section
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#Nom: change_mac
+#Description: change la mac adresse d'une machine en saisissant soit l'ip
+#             soit le nom de la mahcine et spécifiant le domaine
+#--- usage: ddt change_mac -d legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66
+#--- usage: ddt change_mac -d legi-sector03 -i 194.254.66.187 -m 00:18:F3:03:6F:66
+
+sub change_mac {
+   my ($hostname, $domainset, $ip, $mac) = @_;
+
+   $mac = normalize_mac_address($mac);
+   control_exist_domainset($COMPUTER_DB, $domainset)   or exit;
+   control_syntax_mac_address($mac)                   or exit;
+   control_exist_mac($COMPUTER_DB, $mac)               or die "Error: Physical MAC address already exists: $mac\n";
+   if ($ip ne '') {
+      control_syntax_ip($ip) or exit;
+      if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+         print "Error: Unkown IP address: $ip\n";
+         exit;
+         }
+      my @domaindb = @{$COMPUTER_DB->{$domainset}};
+      my $cpt = 0;
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+            if ($value->{$id}->{'ip'} eq $ip) {
+               my $host = $value->{$id};
+               $host->{'modify_time'} = time;
+               $COMPUTER_DB->{$domainset}->[$cpt] = { $mac => $host };
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               print "Update [OK]\n";
+               print "Hostname: $host->{'hostname'}\n";
+               print "MAC: $mac\n";
+               print "IP: $host->{'ip'}\n";
+               exit;
+               }
+            $cpt++;
+            }
+         }
+         #print "Mise à jour de l'adresse MAC [FAILED]\n";
+         #print "l'adresse IP n'existe pas sur le domaine $domainset\n";
+      }
+   elsif ($hostname ne '') {
+      if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         }
+      my @domaindb = @{$COMPUTER_DB->{$domainset}};
+      my $cpt = 0;
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+            if ($value->{$id}->{'hostname'} eq $hostname) {
+               my $host = $value->{$id};
+               $host->{'modify_time'} = time;
+               $COMPUTER_DB->{$domainset}->[$cpt] = { $mac => $host };
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               print "Update [OK]\n";
+               print "Hostname: $host->{'hostname'}\n";
+               print "MAC: $mac\n";
+               print "IP: $host->{'ip'}\n";
+               exit;
+               }
+            }
+         $cpt++;
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: change_ip
+#Description: change l'adresse IP d'une machine en saisissant le nom de la machine
+#             et le domaine
+
+sub change_ip {
+   my ($hostname, $domainset, $ip) = @_;
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+      die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+      }
+   control_syntax_ip($ip) or exit;
+   control_exist_ip($COMPUTER_DB, $ip) or die "Error: IP address already exist in domain set attachement $domainset: $ip\n";
+   my @domaindb = @{$COMPUTER_DB->{$domainset}};
+   my $cpt = 0;
+   for my $value (@domaindb) {
+      for my $id (keys %{$value}) {
+         if (($value->{$id}->{'hostname'} eq $hostname)
+               and (
+                  ($value->{$id}->{'address_type'} eq 'dhcp')
+                  or ($value->{$id}->{'address_type'} eq 'static')
+                  )
+               ) {
+            $COMPUTER_DB->{$domainset}[$cpt]{$id}{'ip'} = $ip;
+            $COMPUTER_DB->{$domainset}[$cpt]{$id}{'modify_time'} = time;
+            YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+            print "Update [OK]\n";
+            print "Hostname: $hostname\n";
+            print "MAC: $id\n";
+            print "IP: $ip\n";
+            exit;
+            }
+         else {
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
+               print "Modification de l'adresse IP [FAILED]\n";
+               print "La machine $hostname sur le domain set $domainset fait partie du pool DHCP ".$value->{$id}->{'ip'}."\n";
+               print "Veuillez la supprimer du pool et la recréer avec l'adresse IP que vous souhaitez.\n";
+               exit;
+               }
+            }
+         }
+      $cpt++;
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: change_host
+#Description: change le computer hostname en saisissant l'IP et le domaine
+
+sub change_host {
+   my ($hostname, $domainset, $ip) = @_;
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   control_syntax_ip($ip)   or exit;
+   if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+      print "Error: Unkown IP address: $ip\n";
+      exit;
+      }
+   control_exist_hostname($COMPUTER_DB, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+
+   my @domaindb = @{$COMPUTER_DB->{$domainset}};
+   my $cpt = 0;
+   for my $value (@domaindb) {
+      for my $id (keys %{$value}) {
+         if ($value->{$id}->{'ip'} eq $ip) {
+            $COMPUTER_DB->{$domainset}[$cpt]{$id}{'hostname'} = $hostname;
+            $COMPUTER_DB->{$domainset}[$cpt]{$id}{'modify_time'} = time;
+            YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+            print "Update [OK]\n";
+            print "Hostname: $hostname\n";
+            print "MAC: $id\n";
+            print "IP: $ip\n";
+            exit;
+            }
+         }
+      $cpt++;
+      }
+   print "Error: Failed to update computer hostname\n";
+   print "L'adresse IP: $ip n'existe pas dans le domaine: $domainset.\n";
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_mac {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip, $mac);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'mac|m=s'         => \$mac,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $domainset  eq ''
+      or $mac        eq '';
+   exit_on_error_option($help)
+      if $hostname   ne ''
+      and $ip        ne '';
+
+   change_mac($hostname, $domainset, $ip, $mac);
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_ip {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      or $domainset  eq ''
+      or $ip         eq '';
+
+   change_ip($hostname, $domainset, $ip);
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_host {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      or $domainset  eq ''
+      or $ip         eq '';
+
+   change_host($hostname, $domainset, $ip);
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_comment {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($domainset, $mac, $comment);
+
+   GetOptions(
+      'domainset|d=s'   => \$domainset,
+      'mac|m=s'         => \$mac,
+      'comment|c=s'     => \$comment,
+      );
+
+   exit_on_error_option($help)
+      if $domainset  eq ''
+      or $mac        eq ''
+      or $comment    eq '';
+
+   $mac     = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
+
+   control_exist_domainset($COMPUTER_DB, $domainset)   or exit;
+   control_syntax_mac_address($mac)                   or exit;
+   control_syntax_comment($comment)                   or exit;
+
+   my @domaindb = @{$COMPUTER_DB->{$domainset}};
+   my $cpt = 0;
+   for my $value (@domaindb) {
+      for my $id (keys %{$value}) {
+         if ($id eq $mac) {
+            my $host = $COMPUTER_DB->{$domainset}[$cpt]{$mac};
+            $host->{'comment'}     = $comment;
+            $host->{'modify_time'} = time;
+
+            YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+            exit;
+            }
+         }
+      $cpt++;
+      }
+   print "Mise à jour du commentaire de la machine [FAILED]\n";
+   print "L'adresse MAC: $mac n'existe pas dans le domaine: $domainset.\n";
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_domainset {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($domainset, $ip, $mac);
+
+   GetOptions(
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'mac|m=s'         => \$mac,
+      );
+
+   exit_on_error_option($help)
+      if $domainset  eq ''
+      or $ip         eq ''
+      or $mac        eq '';
+
+   $mac = normalize_mac_address($mac);
+
+   control_exist_domainset($COMPUTER_DB, $domainset)   or exit;
+   control_syntax_ip($ip)                             or exit;
+   control_syntax_mac_address($mac)                   or exit;
+
+   LOOP_ON_DOMAINSET:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+      my $cpt_mac = 0;
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+            if ($id eq $mac) {
+               my $host = $COMPUTER_DB->{$domain_name}[$cpt_mac]{$mac};
+               next LOOP_ON_DOMAINSET if $host->{'ip'} ne $ip;
+
+               $host->{'modify_time'} = time;
+               splice(@{$COMPUTER_DB->{$domain_name}}, $cpt_mac => 1);
+               push @{$COMPUTER_DB->{$domainset}}, { $mac => $host };
+
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+            }
+         $cpt_mac++;
+         }
+      }
+   print "Update of domain set $domainset [FAILED]\n";
+   print "L'adresse MAC: $mac ou l'adresse IP: $ip n'existe pas dans la base\n";
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_tag {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip, $mac, $tags);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'mac|m=s'         => \$mac,
+      'tag|t=s'         => \$tags,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+
+   exit_on_error_option($help)
+      if $domainset  eq ''
+      or $tags       eq '';
+   exit_on_error_option($help)
+      if $mac        eq ''
+      and $hostname  eq ''
+      and $ip        eq '';
+
+   $mac = normalize_mac_address($mac);
+
+   if ($tags !~ m/^ (?:\w+,)* \w+ $/xms) {
+      die "Error: Bad format for tags (comma separated list): $tags\n";
+      }
+
+   for my $tag (split/,/, $tags) {
+      next if $tag eq 'universal';
+      die "Error: TAG doesn't exist in the database. Create it before with create_tag: $tag\n" if not exists $COMPUTER_DB->{'tag'}{$tag};
+      }
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   
+   $mac = get_mac_from_ip($domainset, $ip, $mac)             if $ip ne '';
+   $mac = get_mac_from_hostname($domainset, $hostname, $mac) if $hostname ne '';
+   control_syntax_mac_address($mac) or exit;
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@{$COMPUTER_DB->{$domainset}}) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+      $attribute->{'tag'}         = $tags;
+      $attribute->{'modify_time'} = time;
+
+      delete $attribute->{'tag'} if $tags eq 'universal';
+      YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+      exit;
+      }
+   print "Mise à jour du commentaire de la machine [FAILED]\n";
+   print "L'adresse MAC: $mac n'existe pas dans le domaine: $domainset.\n";
+   }
+
+#-------------------------------------------------------------------------------
+# ACTIVATION section
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#Nom: disable_pc
+#Description: désactive une machine (du DHCP ou en IP statique, et du DNS) (champs enabled=non)
+
+sub disable_pc {
+   my ($hostname, $domainset, $ip) = @_;
+
+   if ($ip ne '') {
+      control_syntax_ip($ip);
+      if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+         print "Error: Unkown IP address: $ip\n";
+         exit;
+         }
+
+      for my $domain_name (keys %{$COMPUTER_DB}) {
+         next if $domain_name eq 'dset';
+         next if $domain_name eq 'pool';
+         next if $domain_name eq 'pxe';
+         next if $domain_name eq 'tag';
+
+         my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+         my $cpt_mac = 0;
+         for my $value (@domaindb) {
+            for my $id (keys %{$value}) {
+
+               if ($value->{$id}->{'ip'} eq $ip) {
+                  my $timestamp = time;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'} = 'no';
+                  print "L'adresse IP: $ip a été désactivée. Valeur du champs enabled: [".$COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'}."]\n";
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  exit;
+                  }
+               $cpt_mac++;
+               }
+            }
+         }
+      }
+   else {
+      control_exist_domainset($COMPUTER_DB, $domainset);
+      if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         }
+
+      my $cpt_mac = 0;
+      for my $value (@{$COMPUTER_DB->{$domainset}}) {
+         for my $id (keys %{$value}) {
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
+               my $timestamp = time;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'enabled'} = 'no';
+               print "La machine $hostname (domaine: $domainset) a été désactivé du DHCP. Valeur du champs enabled: [".$COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'enabled'}."]\n";
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
+               print "Désactivation de la machine $hostname sur le domaine $domainset [FAILED]\n";
+               print "La machine $hostname fait partie du pool $hostname.\n";
+               exit;
+               }
+            }
+         $cpt_mac++;
+         }
+      }
+   #print "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   }
+
+#-------------------------------------------------------------------------------
+
+sub disable_float {
+   my ($pool, $mac) = @_;
+
+   my $cpt_mac;
+   if ( control_exist_mac($COMPUTER_DB, $mac) == 1 ) {
+      print "Error: Unkown physical MAC address: $mac\n";
+      exit;
+      }
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      $cpt_mac=0;
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+            if ($id eq $mac) {
+               if ($value->{$id}->{'ip'} eq $pool) {
+                  #splice(@{$COMPUTER_DB->($domain_name)} , $cpt_mac => 1);
+                  my $timestamp = time;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'} = 'no';
+                  print  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'}."\n";
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  print "Désactivation de la machine $mac du pool $pool [OK]\n";
+                  exit;
+                  }
+               else {
+                  print "Désactivation de la machine $mac [FAILED]\n";
+                  print "La machine $mac n'appartient pas au pool $pool.\n";
+                  exit;
+                  }
+               }
+            $cpt_mac++;
+            }
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: enable_pc
+#Description: active une machine désactivée(du DHCP ou en IP statique, et du DNS) (champs enabled=non)
+
+sub enable_pc {
+   my ($hostname, $domainset, $ip) = @_;
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   if ($ip ne '') {
+      control_syntax_ip($ip);
+      if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+         print "Error: Unkown IP address: $ip\n";
+         exit;
+         }
+
+      for my $domain_name (keys %{$COMPUTER_DB}) {
+         next if $domain_name eq 'dset';
+         next if $domain_name eq 'pool';
+         next if $domain_name eq 'pxe';
+         next if $domain_name eq 'tag';
+
+         my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+         my $cpt_mac=0;
+         for my $value (@domaindb) {
+            for my $id (keys %{$value}) {
+               if ($value->{$id}->{'ip'} eq $ip) {
+                  my $timestamp = time;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'} = 'yes';
+                  print "L'adresse IP: $ip a été réactivée. Valeur du champs enabled: [".$COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'}."]\n";
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  exit;
+                  }
+               $cpt_mac=$cpt_mac+1;
+               }
+            }
+         }
+      }
+   else {
+      if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         }
+
+      my $cpt_mac=0;
+      for my $value (@{$COMPUTER_DB->{$domainset}}) {
+         for my $id (keys %{$value}) {
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
+               my $timestamp = time;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'enabled'} = 'yes';
+               print "La machine $hostname (domaine: $domainset) a été réactivée du DHCP. Valeur du champs enabled: [".$COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'enabled'}."]\n";
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
+               print "Réactivation de la machine $hostname sur le domaine $domainset [FAILED]\n";
+               print "La machine $hostname fait partie du pool $hostname.\n";
+               exit;
+               }
+            }
+         $cpt_mac++;
+         }
+      }
+   #print "La machine $hostname n'existe pas sur le domaineset: $domainset\n";
+   }
+
+#-------------------------------------------------------------------------------
+
+sub enable_float {
+   my ($pool, $mac) = @_;
+
+   my $cpt_mac;
+   if ( control_exist_mac($COMPUTER_DB, $mac) == 1 ) {
+      print "Adresse MAC $mac non trouvée.\n";
+      exit;
+      }
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      $cpt_mac=0;
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+            if ($id eq $mac) {
+               if ($value->{$id}->{'ip'} eq $pool) {
+                  #splice(@{$COMPUTER_DB->($domain_name)} , $cpt_mac => 1);
+                  my $timestamp = time;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'enabled'} = 'yes';
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  print "Réactivation de la machine $mac du pool $pool [OK]\n";
+                  exit;
+                  }
+               else {
+                  print "Réactivation de la machine $mac [FAILED]\n";
+                  print "La machine $mac n'appartient pas au pool $pool.\n";
+                  exit;
+                  }
+               }
+            $cpt_mac++;
+            }
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_enable_pc {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $domainset  eq '';
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      and $ip        eq '';
+   exit_on_error_option($help)
+      if $hostname   ne ''
+      and $ip        ne '';
+
+   enable_pc($hostname, $domainset, $ip);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_disable_pc {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $domainset  eq '';
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      and $ip        eq '';
+   exit_on_error_option($help)
+      if $hostname   ne ''
+      and $ip        ne '';
+
+   disable_pc($hostname, $domainset, $ip);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_disable_float {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pool, $mac);
+
+   GetOptions(
+      'pool|p=s'  => \$pool,
+      'mac|m=s'   => \$mac,
+      );
+
+   exit_on_error_option($help)
+      if $pool eq ''
+      or $mac  eq '';
+
+   disable_float($pool, $mac);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_enable_float {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pool, $mac);
+
+   GetOptions(
+      'pool|p=s'  => \$pool,
+      'mac|m=s'   => \$mac,
+      );
+
+   exit_on_error_option($help)
+      if $pool eq ''
+      or $mac  eq '';
+
+   enable_float($pool, $mac);
+   }
+
+#-------------------------------------------------------------------------------
+# DELETE section
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#Nom: del_pc
+#Description: supprime une machine en DHCP ou en IP statique.
+
+sub del_pc {
+   my ($hostname, $domainset, $ip) = @_;
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   if ($ip ne '') {
+      if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+         die "Error: Unkown IP address: $ip\n";
+         }
+      my $cpt_mac=0;
+      for my $value (@{$COMPUTER_DB->{$domainset}}) {
+         for my $id (keys %{$value}) {
+            if ($value->{$id}->{'ip'} eq $ip) {
+               my $timestamp = time;
+               splice(@{$COMPUTER_DB->{$domainset}}, $cpt_mac => 1);
+               print "La machine $ip a été supprimer du domaine $domainset\n";
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+            }
+         $cpt_mac++;
+         }
+      #print "La machine $ip n'existe pas sur le domaine $domainset.\n";
+      }
+   else {
+      if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         }
+      my $cpt_mac=0;
+      for my $value (@{$COMPUTER_DB->{$domainset}}) {
+         for my $id (keys %{$value}) {
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
+               my $timestamp = time;
+               splice(@{$COMPUTER_DB->{$domainset}}, $cpt_mac => 1);
+               print "La machine $hostname a été supprimer du domaine $domainset\n";
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
+               print "Suppression de la machine $hostname sur le domaine $domainset [FAILED]\n";
+               print "La machine $hostname fait partie du pool DHCP $hostname.\n";
+               exit;
+               }
+            }
+         $cpt_mac++;
+         }
+      #print "La machine $hostname n'existe pas sur le domaine $domainset.\n";
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: del_float
+#Description: supprime une machine d'un pool DHCP
+
+sub del_float {
+   my ($pool, $mac) = @_;
+
+   my $cpt_mac;
+   if ( control_exist_mac($COMPUTER_DB, $mac) == 1 ) {
+      print "Adresse MAC $mac non trouvée.\n";
+      exit;
+      }
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      $cpt_mac=0;
+      for my $value (@domaindb) {
+         for my $id (keys %{$value}) {
+
+            if ($id eq $mac) {
+               if ($value->{$id}->{'ip'} eq $pool) {
+                  #splice(@{$COMPUTER_DB->($domain_name)} , $cpt_mac => 1);
+                  splice(@{$COMPUTER_DB->{$domain_name}}, $cpt_mac => 1);
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  print "Suppression de la machine $mac du pool $pool [OK]\n";
+                  exit;
+                  }
+               else {
+                  print "Suppression de la machine $mac [FAILED]\n";
+                  print "La machine $mac n'appartient pas au pool $pool.\n";
+                  exit;
+                  }
+               }
+            $cpt_mac++;
+            }
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_del_pc {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $domainset  eq '';
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      and $ip        eq '';
+   exit_on_error_option($help)
+      if $hostname   ne ''
+      and $ip        ne '';
+
+   del_pc($hostname, $domainset, $ip);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_del_float {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pool, $mac);
+
+   GetOptions(
+      'pool|p=s'        => \$pool,
+      'mac|m=s'         => \$mac,
+      );
+
+   exit_on_error_option($help)
+      if $pool eq ''
+      or $mac  eq '';
+
+   del_float($pool, $mac);
+   }
+
+#-------------------------------------------------------------------------------
+# DOMAIN SET section
+#-------------------------------------------------------------------------------
+
+sub cmd_create_domainset {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($domainset, $dns_extension, $comment);
+
+   GetOptions(
+      'domainset|d=s'      => \$domainset,
+      'dns-extension|e=s'  => \$dns_extension,
+      'comment|c=s'        => \$comment,
+      );
+
+   exit_on_error_option($help)
+      if $domainset     eq ''
+      or $dns_extension eq ''
+      or $comment       eq '';
+
+   $comment = normalize_comment($comment);
+
+   $COMPUTER_DB->{'dset'} ||= {};
+   die "Error: Domain Set already exists: $domainset\n" if exists $COMPUTER_DB->{'dset'}{$domainset};
+
+   control_syntax_comment($comment)    or exit;
+
+   my $timestamp = time;
+   $COMPUTER_DB->{'dset'}{$domainset} = {
+      'dns_extension'   => $dns_extension,
+      'comment'         => $comment,
+      'create_time'     => $timestamp,
+      'modify_time'     => $timestamp,
+      };
+   $COMPUTER_DB->{$domainset} ||= []; # Create empty Domain Set computer list by default
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+# POOL section
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#Nom: create_pool
+#Description: crée un pool dans le fichier de données YAML et dans le DHCP.
+#
+#Commentaires: il y a un petit bug si jamais on rentre que des adresses ip qui existent déjà.
+#              Le pool est créé mais sans adresses ip.
+
+sub cmd_create_pool {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pool, $domainset, $file_pool, $ipaddress_pool);
+
+   GetOptions(
+      'pool|p=s'           => \$pool,
+      'domainset|d=s'      => \$domainset,
+      'file-pool|f=s'      => \$file_pool,
+      'ipaddress-pool|i=s' => \$ipaddress_pool,
+      );
+
+   exit_on_error_option($help)
+      if $pool             eq ''
+      or $domainset        eq ''
+      or $file_pool        eq ''
+      or $ipaddress_pool   eq '';
+
+   if ($COMPUTER_DB->{'pool'}) {
+      die "Error: Pool already exists: $pool\n" if exists $COMPUTER_DB->{'pool'}{$pool};
+      }
+
+   #--- control if the domain's pool exist ---#
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+
+   my @ip_list = ();
+   #---control if address exist ---#
+   if ($ipaddress_pool =~ /,/) {
+      for my $ip (split /,/, $ipaddress_pool) {
+         if ($ip =~ /-/) {
+            my ($ip1, $ip2, $ip3, $range) = split /\./, $ip;
+            my ($first, $last) = split /-/, $range;
+            for (my $cpt = $first; $cpt <= $last; $cpt++) {
+               my $ip_loc = "$ip1.$ip2.$ip3.$cpt";
+               control_syntax_ip($ip_loc) or die "Error: Bad IP syntax: $ip_loc\n";
+               control_exist_ip($COMPUTER_DB, $ip_loc) or die "Error: IP address already exists: $ip_loc\n";
+               push @ip_list, $ip_loc;
+               }
+            }
+         else {
+            control_syntax_ip($ip) or next;
+            if ( control_exist_ip($COMPUTER_DB, $ip) == 0 ) {
+               print "L'adresse IP $ip existe déjà\n";
+               next;
+               }
+            push @ip_list, $ip;
+            }
+         }
+      }
+
+   my $timestamp = time;
+   $COMPUTER_DB->{'pool'}{$pool} = {
+      'ip'          => [@ip_list],
+      'enabled'     => 'yes',
+      'create_time' => $timestamp,
+      'modify_time' => $timestamp,
+      'file'        => $file_pool,
+      'domain'      => $domainset,
+      };
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_show_pool {
+   local @ARGV = @_;
+
+   my ($no_header);
+
+   GetOptions(
+      'no-header|H' => \$no_header,
+      );
+
+   printf "%-17s %-17s %s\n", 'Pool', 'File', 'DNS-Domain' if not $no_header;
+   LOOP_ON_PXE:
+   for my $pool ( keys %{$COMPUTER_DB->{'pool'}} ) {
+      
+      printf "%-17s %-17s %s\n",
+         $pool,
+         $COMPUTER_DB->{'pool'}{$pool}{'file'},
+         $COMPUTER_DB->{'pool'}{$pool}{'domain'},
+      }
+   }
+
+#-------------------------------------------------------------------------------
+# PXE section
+#-------------------------------------------------------------------------------
+
+sub cmd_create_pxe {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pxe_config, $ip_next_server, $filename, $comment);
+
+   GetOptions(
+      'bootp|b=s'       => \$pxe_config,
+      'next-server|n=s' => \$ip_next_server,
+      'filename|f=s'    => \$filename,
+      'comment|c=s'     => \$comment,
+      );
+
+   exit_on_error_option($help)
+      if $pxe_config       eq ''
+      or $ip_next_server   eq ''
+      or $filename         eq ''
+      or $comment          eq '';
+
+   $comment = normalize_comment($comment);
+
+   $COMPUTER_DB->{'pxe'} ||= {};
+   die "Error: PXE config already exists: $pxe_config\n" if exists $COMPUTER_DB->{'pxe'}{$pxe_config};
+
+   control_syntax_ip($ip_next_server)  or die "Error: Bad IP syntax: $ip_next_server\n";
+   control_syntax_comment($comment)    or exit;
+
+   my $timestamp = time;
+   $COMPUTER_DB->{'pxe'}{$pxe_config} = {
+      'ip_next_server'  => $ip_next_server,
+      'filename'        => $filename,
+      'comment'         => $comment,
+      'create_time'     => $timestamp,
+      'modify_time'     => $timestamp,
+      };
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_remove_pxe {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($pxe_config);
+
+   GetOptions(
+      'bootp|b=s' => \$pxe_config,
+      );
+
+   exit_on_error_option($help)
+      if $pxe_config eq '';
+
+   $COMPUTER_DB->{'pxe'} ||= {};
+   die "Error: PXE config does not exist: $pxe_config\n" if not exists $COMPUTER_DB->{'pxe'}{$pxe_config};
+
+   # Test if some computer use this config
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@{$COMPUTER_DB->{$domain_name}}) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         if (exists $attribute->{'pxe_config'}) {
+            my $hostname = $attribute->{'hostname'};
+            die "Error: computer still use this PXE config: $hostname.$domain_name $mac_address\n" if $pxe_config eq $attribute->{'pxe_config'};
+            }
+         }
+      }
+
+   delete $COMPUTER_DB->{'pxe'}{$pxe_config};
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_show_pxe {
+   local @ARGV = @_;
+
+   my ($no_header);
+
+   GetOptions(
+      'no-header|H' => \$no_header,
+      );
+
+   printf "%-12s %-13s %-30s %s\n", 'PXE-Config', 'Next-Server', 'Filename', 'Comment' if not $no_header;
+   LOOP_ON_PXE:
+   for my $pxe_config ( keys %{$COMPUTER_DB->{'pxe'}} ) {
+      my $ip_next_server = $COMPUTER_DB->{'pxe'}{$pxe_config}{'ip_next_server'};
+      my $filename       = $COMPUTER_DB->{'pxe'}{$pxe_config}{'filename'};
+      my $comment        = $COMPUTER_DB->{'pxe'}{$pxe_config}{'comment'};
+      
+      printf "%-12s %-13s %-30s %s\n", $pxe_config, $ip_next_server, $filename, $comment;
+      }
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_enable_pxe {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip, $pxe_config);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      'bootp|b=s'       => \$pxe_config,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $domainset  eq ''
+      or $pxe_config eq '';
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      and $ip        eq '';
+   exit_on_error_option($help)
+      if $hostname   ne ''
+      and $ip        ne '';
+
+   die "Error: PXE config not exists: $pxe_config\n" if not exists $COMPUTER_DB->{'pxe'}{$pxe_config};
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   if ($ip ne '') {
+      control_syntax_ip($ip);
+      if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+         die "Error: Unkown IP address: $ip\n";
+         }
+
+      for my $domain_name (keys %{$COMPUTER_DB}) {
+         next if $domain_name eq 'dset';
+         next if $domain_name eq 'pool';
+         next if $domain_name eq 'pxe';
+         next if $domain_name eq 'tag';
+
+         my $cpt_mac = 0;
+         for my $computer (@{$COMPUTER_DB->{$domain_name}}) {
+            for my $id (keys %{$computer}) {
+               if ($computer->{$id}->{'ip'} eq $ip) {
+                  my $timestamp = time;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'pxe_config'}  = $pxe_config;
+                  print "IP Address: $ip, PXE enabled in config: $pxe_config\n";
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  exit;
+                  }
+               $cpt_mac++;
+               }
+            }
+         }
+      }
+   else {
+      if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         }
+
+      my $cpt_mac = 0;
+      for my $value (@{$COMPUTER_DB->{$domainset}}) {
+         for my $id (keys %{$value}) {
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
+               my $timestamp = time;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'pxe_config'}  = $pxe_config;
+               print "Host $hostname ($domainset), PXE enabled in config: $pxe_config\n";
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
+               die "Error. Host $hostname ($domainset) in a pool. No PXE possible\n";
+               }
+            }
+         $cpt_mac++;
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_disable_pxe {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $domainset, $ip);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'domainset|d=s'   => \$domainset,
+      'ip|i=s'          => \$ip,
+      );
+
+   ($hostname, $domainset) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+   exit_on_error_option($help)
+      if $domainset  eq '';
+   exit_on_error_option($help)
+      if $hostname   eq ''
+      and $ip        eq '';
+   exit_on_error_option($help)
+      if $hostname   ne ''
+      and $ip        ne '';
+
+   control_exist_domainset($COMPUTER_DB, $domainset) or exit;
+   if ($ip ne '') {
+      control_syntax_ip($ip);
+      if ( control_exist_ip($COMPUTER_DB, $ip) == 1 ) {
+         die "Error: Unkown IP address: $ip\n";
+         }
+
+      for my $domain_name (keys %{$COMPUTER_DB}) {
+         next if $domain_name eq 'dset';
+         next if $domain_name eq 'pool';
+         next if $domain_name eq 'pxe';
+         next if $domain_name eq 'tag';
+
+         my $cpt_mac = 0;
+         for my $computer (@{$COMPUTER_DB->{$domain_name}}) {
+            for my $id (keys %{$computer}) {
+               if ($computer->{$id}->{'ip'} eq $ip) {
+                  next if not exists $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'pxe_config'};
+                  
+                  my $pxe_config = $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'pxe_config'};
+                  my $timestamp  = time;
+                  $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+                  delete $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'pxe_config'};
+                  print "IP Address: $ip, PXE disable from config: $pxe_config\n";
+                  YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+                  exit;
+                  }
+               $cpt_mac++;
+               }
+            }
+         }
+      }
+   else {
+      if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 1 ) {
+         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         }
+
+      my $cpt_mac = 0;
+      for my $value (@{$COMPUTER_DB->{$domainset}}) {
+         for my $id (keys %{$value}) {
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
+               next if not exists $value->{$id}->{'pxe_config'};
+               
+               my $pxe_config = $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'pxe_config'};
+               my $timestamp  = time;
+               $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
+               delete $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'pxe_config'};
+               print "Host $hostname ($domainset), PXE disable from config: $pxe_config\n";
+               YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+               exit;
+               }
+
+            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
+               die "Error. Host $hostname ($domainset) in a pool. No PXE possible\n";
+               }
+            }
+         $cpt_mac++;
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+# TAG section
+#-------------------------------------------------------------------------------
+
+sub cmd_create_tag {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($tag, $comment);
+
+   GetOptions(
+      'tag|t=s'      => \$tag,
+      'comment|c=s'  => \$comment,
+      );
+
+   exit_on_error_option($help)
+      if $tag     eq ''
+      or $comment eq '';
+
+   $comment = normalize_comment($comment);
+
+   $COMPUTER_DB->{'tag'} ||= {};
+   die "Error: TAG already exists: $tag\n" if exists $COMPUTER_DB->{'tag'}{$tag};
+
+   die "Error: TAG 'universal' is intrinsic. It's not possible to create it.\n" if $tag eq 'universal';
+
+   if ($tag !~ m/^ \w+ $/xms) {
+      die "Error: Bad format for TAG (alphanumeric string): $tag\n";
+      }
+
+   control_syntax_comment($comment) or exit;
+
+   my $timestamp = time;
+   $COMPUTER_DB->{'tag'}{$tag} = {
+      'comment'         => $comment,
+      'create_time'     => $timestamp,
+      'modify_time'     => $timestamp,
+      };
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_remove_tag {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($tag);
+
+   GetOptions(
+      'tag|t=s' => \$tag,
+      );
+
+   exit_on_error_option($help)
+      if $tag eq '';
+
+   $COMPUTER_DB->{'tag'} ||= {};
+   die "Error: TAG does not exist: $tag\n" if not exists $COMPUTER_DB->{'tag'}{$tag};
+
+   # Test if some computer use this config
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@{$COMPUTER_DB->{$domain_name}}) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         if (exists $attribute->{'tag'}) {
+            my $hostname = $attribute->{'hostname'};
+            die "Error: Computer still use this TAG: $hostname.$domain_name $mac_address\n" if $tag eq $attribute->{'tag'};
+            }
+         }
+      }
+
+   delete $COMPUTER_DB->{'tag'}{$tag};
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_show_tag {
+   local @ARGV = @_;
+
+   my ($no_header);
+
+   GetOptions(
+      'no-header|H' => \$no_header,
+      );
+
+   printf "%-12s %s\n", 'TAG', 'Comment' if not $no_header;
+   LOOP_ON_TAG:
+   for my $tag ( keys %{$COMPUTER_DB->{'tag'}} ) {
+      my $comment = $COMPUTER_DB->{'tag'}{$tag}{'comment'};
+
+      printf "%-12s %s\n", $tag, $comment;
+      }
+   }
+
+#--------------------------------------------------------------------------------
+# GLOBAL section
+#--------------------------------------------------------------------------------
+
+sub cmd_upgrade_db {
+   my $flag_change;
+
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@domaindb) {
+         my ($mac_address, $attribute) = %{$computer};
+         my $new_mac = normalize_mac_address($mac_address);
+         print "perl -pi -e 's/$mac_address:/$new_mac:/' $COMPUTER_YAML\n" if "$mac_address" ne "$new_mac";
+
+         my $comment = $attribute->{'comment'};
+         $comment =~ s/\s\s+/ /g and $flag_change++;
+         $comment =~ s/^\s+\S//  and $flag_change++;
+         $comment =~ s/\S\s+$//  and $flag_change++;
+         $comment =~ s{^(\d\d\d\d)\/O(\d\/\d\d)}{$1/0$2} and $flag_change++;
+         $comment =~ s{^(\d\d\d\d\/\d\d\/)O(\d)}{$1/0$2} and $flag_change++;
+         $comment =~ s{^(\d\d\d\d)\/(\d\d)\/(\d\d)}{$1-$2-$3} and $flag_change++;
+         if ($comment !~ m/^\d\d\d\d-\d\d-\d\d/) {
+            print "# no date at beginning of comment $mac_address\n";
+            }
+
+         $attribute->{'comment'} = $comment;
+         }
+      }
+   print "# FLAG :$flag_change\n";
+
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB) if $flag_change;
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_show_domainset {
+
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      print "$domain_name\n";
+      }
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_search_mac {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($mac);
+
+   GetOptions(
+      'mac|m=s' => \$mac,
+      );
+
+   exit_on_error_option($help)
+      if $mac eq '';
+
+   $mac = normalize_mac_address($mac);
+
+   control_syntax_mac_address($mac) or exit;
+
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@domaindb) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+         my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
+         $year += 1900;
+         $mon++;
+         my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
+
+         my $comment = $attribute->{'comment'};
+         $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
+
+         my $enable = $attribute->{'enabled'};
+         if (exists $attribute->{'pxe_config'}) {
+            $enable .= '/' . $attribute->{'pxe_config'};
+            }
+         if (exists $attribute->{'tag'}) {
+            $enable .= ':' . $attribute->{'tag'};
+            }
+
+         printf "%-30s  %-20s %17s %9s %3s %10s %s\n",
+            $attribute->{'hostname'} . '.' . $domain_name,
+            $attribute->{'ip'},
+            $mac_address,
+            $attribute->{'address_type'},
+            $enable,
+            $date,
+            $comment;
+         }
+      }
+   }
+
+#--------------------------------------------------------------------------------
+#Nom: show
+#Description: liste les machines à partir du fichier YAML par nom de domaine.
+
+sub cmd_show_host {
+   my %ipdb = ();
+
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      print "\n# *** List of computers in the domain set: $domain_name ***\n";
+      printf "%-30s  %-20s %17s %5s %7s %-10s %s\n",
+         'Hostname',
+         'IPv4-Address',
+         'MAC-Address',
+         'Type',
+         'Status',
+         'Date',
+         'Comment';
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@domaindb) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         if ($attribute->{'ip'} =~ $DDT::RE::IPv4_ADDRESS) {
+            if ( not exists $ipdb{ $attribute->{'ip'} } ) {
+               $ipdb{ $attribute->{'ip'} } = {
+                  'mac_address'  => $mac_address,
+                  %{$attribute},
+                  'domain'       => $domain_name,
+                  };
+               next LOOP_ON_COMPUTER;
+               }
+            else {
+               print {*STDERR} "# Warning: $attribute->{'ip'} already exists in the database !\n";
+               }
+            }
+
+         my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
+         $year += 1900;
+         $mon++;
+         my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
+
+         my $comment = normalize_comment($attribute->{'comment'});
+         $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
+
+         my $ip = $attribute->{'ip'};
+
+         my $enable = $attribute->{'enabled'};
+         if (exists $attribute->{'pxe_config'}) {
+            $enable .= '/' . $attribute->{'pxe_config'};
+            }
+         if (exists $ipdb{$ip}->{'tag'}) {
+            $enable .= ':' . $ipdb{$ip}->{'tag'};
+            }
+
+         printf "%-30s  %-20s %17s %9s %3s %10s %s\n",
+            $attribute->{'hostname'} . '.' . $domain_name,
+            $ip,
+            $mac_address,
+            $attribute->{'address_type'},
+            $enable,
+            $date,
+            $comment;
+         }
+      }
+
+   print "\n# *** List of computers ordered by IP and domain set ***\n";
+   LOOP_ON_IP_ADDRESS:
+   foreach my $ip (Net::Netmask::sort_by_ip_address(keys %ipdb)) {
+      my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $ipdb{$ip}->{'modify_time'};
+      $year += 1900;
+      $mon++;
+      my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
+
+      my $comment =$ipdb{$ip}->{'comment'};
+      $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
+
+      my $enable = $ipdb{$ip}->{'enabled'};
+      if (exists $ipdb{$ip}->{'pxe_config'}) {
+         $enable .= '/' . $ipdb{$ip}->{'pxe_config'};
+         }
+      if (exists $ipdb{$ip}->{'tag'}) {
+         $enable .= ':' . $ipdb{$ip}->{'tag'};
+         }
+
+      printf "%-30s %-20s %17s %9s %3s %10s %s\n",
+         $ipdb{$ip}->{'hostname'} . '.' . $ipdb{$ip}->{'domain'},
+         $ip,
+         normalize_mac_address($ipdb{$ip}->{'mac_address'}),
+         $ipdb{$ip}->{'address_type'},
+         $enable,
+         $date,
+         $comment;
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: cmd_generate_dhcp_file
+#Description: génère les fichiers de configuration des machines et des pools du dhcp
+
+sub cmd_generate_dhcp_file {
+   backup_database();
+
+   my %file_pool;
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      open FILE_VLAN, '>', "$FOLDER_GEN_DHCP/$domain_name";
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+      for my $value (@domaindb) {
+         ALL_MAC_ADDRESS:
+         for my $mac_addres (keys %{$value}) {
+            #host pcdavoust {  deny-unknown-clients;
+            #hardware ethernet 0:6:5b:b8:13:d1;
+            #fixed-address 194.254.66.72;
+            #}
+
+            my $hostname     = $value->{$mac_addres}{'hostname'};
+            my $ip           = $value->{$mac_addres}{'ip'};
+            my $comment      = $value->{$mac_addres}{'comment'};
+            my $address_type = $value->{$mac_addres}{'address_type'};
+            my $enabled      = $value->{$mac_addres}{'enabled'};
+            my $tags         = $value->{$mac_addres}{'tag'} || 'universal';
+
+            my $buffer;
+            if ($address_type eq 'dhcp') {
+               if ($enabled eq 'yes') {
+                  $buffer  = "host $hostname {\n"; # deny-unknown-clients;
+                  $buffer .= "   hardware ethernet $mac_addres;\n";
+                  $buffer .= "   fixed-address $ip;\n";
+                  
+                  if (exists $value->{$mac_addres}{'pxe_config'}) {
+                     my $pxe_config     = $value->{$mac_addres}{'pxe_config'};
+                     my $ip_next_server = $COMPUTER_DB->{'pxe'}{$pxe_config}{'ip_next_server'};
+                     my $filename       = $COMPUTER_DB->{'pxe'}{$pxe_config}{'filename'};
+                     $buffer .= "   next-server $ip_next_server;\n";
+                     $buffer .= "   filename \"$filename\";\n";
+                     }
+                  $buffer .= "   #comment: $comment\n";
+                  $buffer .= "   }\n";
+                  $buffer .= "\n";
+
+                  for my $tag (split/,/, $tags) {
+                     $file_pool{"tag-$tag"} ||= [];
+                     push @{$file_pool{"tag-$tag"}}, "subclass \"tag-$tag\" 1:$mac_addres; # $comment\n";
+                     }
+                  }
+               else {
+                  $buffer  = "#host $hostname {\n"; # deny-unknown-clients;
+                  $buffer .= "#   hardware ethernet $mac_addres;\n";
+                  $buffer .= "#   fixed-address $ip;\n";
+                  $buffer .= "#   comment: $comment \n";
+                  $buffer .= "#   }\n";
+                  $buffer .= "\n";
+                  }
+               print FILE_VLAN $buffer;
+               }
+            elsif ($address_type eq 'pool-dhcp') {
+               #--- Génère les fichiers pool dhcp ---#
+               for my $current_pool (keys %{$COMPUTER_DB->{'pool'}}) {
+                  next if $current_pool ne $ip;
+
+                  if ($enabled eq 'yes') {
+                     $buffer = "subclass \"$current_pool\" 1:$mac_addres; # $comment\n";
+
+                     for my $tag (split/,/, $tags) {
+                        $file_pool{"tag-$tag"} ||= [];
+                        push @{$file_pool{"tag-$tag"}}, "subclass \"tag-$tag\" 1:$mac_addres; # $comment\n";
+                        }
+                     }
+                  else {
+                     $buffer = "#subclass \"$current_pool\" 1:$mac_addres; # $comment\n";
+                     }
+
+                  my $current_pool_file_name = $COMPUTER_DB->{'pool'}{$current_pool}{'file'};
+
+                  $file_pool{$current_pool_file_name} ||= [];
+                  push @{$file_pool{$current_pool_file_name}}, $buffer;
+                  }
+               }
+            }
+         }
+
+      close FILE_VLAN;
+
+      for my $file_name (keys %file_pool) {
+         open FILE_POOL, '>', "$FOLDER_GEN_DHCP/$file_name";
+         print FILE_POOL @{$file_pool{$file_name}};
+         close FILE_POOL;
+         }
+      }
+      print "Copy DHCP files from $FOLDER_GEN_DHCP to /etc/dhcp/include/\n";
+      exec $SCRIPT_UPDATE;
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: cmd_generate_dns_file
+#Description: génère les fichiers d'enregistrements DNS
+
+sub cmd_generate_dns_file {
+   my $buffer;
+   my $buffer_rev;
+   my $pool_domain;
+
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      if ($domain_name eq 'pool') {
+         #next;
+         for my $value (@{$COMPUTER_DB->{$domain_name}}) {
+            for my $pool_name (keys %{$value}) {
+               $pool_domain = $value->{$pool_name}->{'domain'}."\n";
+               #print $value->{$pool_name}->{'file'};
+               chomp $pool_domain;
+               open FILE_FORWARD_DNS, '>>', "$FOLDER_GEN_DNS/db.$pool_domain.fwd";
+               open FILE_REVERSE_DNS, '>>', "$FOLDER_GEN_DNS/db.$pool_domain.rev";
+               my @T_pool_ip = @{$value->{$pool_name}->{'ip'}};
+               for my $pool_ip (@T_pool_ip) {
+                  my @T_split = split(/\./ , $pool_ip);
+                  $buffer     = sprintf "%-24s IN  A  %-15s ;\n", "$pool_name$T_split[3]", $pool_ip;
+                  $buffer_rev = "$T_split[3]   IN PTR   $pool_name$T_split[3].$pool_domain.\n";
+                  print FILE_FORWARD_DNS $buffer;
+                  print FILE_REVERSE_DNS $buffer_rev;
+                  }
+               close FILE_FORWARD_DNS;
+               close FILE_REVERSE_DNS;
+               }
+            }
+         }
+
+      else {
+         #--- Création du fichier non-reverse ---#
+         open ( FILE_FORWARD_DNS, ">> $FOLDER_GEN_DNS/db.$domain_name.fwd");
+         open ( FILE_REVERSE_DNS, ">> $FOLDER_GEN_DNS/db.$domain_name.rev");
+         my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+         for my $value (@domaindb) {
+            for my $id (keys %{$value}) {
+               #host pcdavoust {  deny-unknown-clients;
+               #hardware ethernet 0:6:5b:b8:13:d1;
+               #fixed-address 194.254.66.72;
+               #}
+               my $hostname = $value->{$id}->{'hostname'};
+               my $ip       = $value->{$id}->{'ip'};
+               my $comment  = $value->{$id}->{'comment'};
+               my $address_type = $value->{$id}->{'address_type'};
+               my $enabled      = $value->{$id}->{'enabled'};
+               
+               my $dns_domain = $domain_name;
+               if (exists $COMPUTER_DB->{'dset'}{$domain_name}) {
+                  $dns_domain = $COMPUTER_DB->{'dset'}{$domain_name}{'dns_extension'};
+                  }
+               my @T_split = split(/\./ , $ip);
+               if  (($address_type eq 'dhcp') or ($address_type eq 'static')) {
+                  if ($enabled eq 'yes') {
+                     $buffer = sprintf "%-24s IN A %-15s ; %s\n", $hostname, $ip, $comment;
+                     if (exists $value->{$id}->{'dns_extension'}
+                           and "$value->{$id}->{'dns_extension'}" != "$dns_domain") {
+                        print "A FAIRE\n";
+                        }
+                     $buffer_rev = $T_split[3]."     IN PTR   $hostname.$dns_domain.\n";
+                     }
+
+                  else {
+                     $buffer = sprintf "%-24s IN A %-15s ; %s\n", $hostname, $ip, $comment;
+                     $buffer_rev = ";".$T_split[3]."    IN PTR   $hostname.$dns_domain.\n";
+                     }
+                  print FILE_REVERSE_DNS $buffer_rev;
+                  print FILE_FORWARD_DNS $buffer;
+                  }
+               }
+            #$cpt=$cpt+1;
+            }
+         print "- DNS: db.$domain_name.fwd db.$domain_name.rev [CREATE].\n";
+         print "Ex : sort -k 4n -t . /usr/local/dhcp-dns-tools/dns/dns.hmg.priv\n";
+         close FILE_REVERSE_DNS;
+         close FILE_FORWARD_DNS;
+         }
+      }
+   }
+
+#--------------------------------------------------------------------------------
+
+sub shell_command {
+   my $cmd = shift;
+
+   require FileHandle;
+   my $fh     = new FileHandle;
+   my @result = ();
+   open $fh, q{-|}, "LANG=C $cmd" or die "Can't exec $cmd\n";
+   @result = <$fh>;
+   close $fh;
+   chomp @result;
+   return @result;
+   }
+
+sub cmd_check_dns {
+
+   LOOP_ON_DOMAIN:
+   for my $domain_name (keys %{$COMPUTER_DB}) {
+      next if $domain_name eq 'dset';
+      next if $domain_name eq 'pool';
+      next if $domain_name eq 'pxe';
+      next if $domain_name eq 'tag';
+
+      my @domaindb = @{$COMPUTER_DB->{$domain_name}};
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@domaindb) {
+         my ($mac_address, $attribute) = %{$computer};
+         #my $new_mac = normalize_mac_address($mac_address);
+         my $ip = $attribute->{'ip'};
+         next LOOP_ON_COMPUTER if not $ip =~ m/$DDT::RE::IPv4_ADDRESS/xms;
+         next LOOP_ON_COMPUTER if $attribute->{'enabled'} eq 'no';
+
+         my $dns_hostname_fq = scalar gethostbyaddr(inet_aton($ip), AF_INET);
+         my ($dns_hostname) = split /\./, $dns_hostname_fq;
+
+         if ($attribute->{'hostname'} ne $dns_hostname) {
+            print "$mac_address ($domain_name) $ip - $dns_hostname / $attribute->{'hostname'} # $attribute->{'comment'}\n";
+            next LOOP_ON_COMPUTER;
+            }
+
+         my $packed_ip = scalar gethostbyname($dns_hostname_fq);
+         if (defined $packed_ip) {
+            my $ip_address = inet_ntoa($packed_ip);
+            if ($ip ne $ip_address) {
+               print "reverse DNS error for $dns_hostname_fq / $ip\n";
+               next LOOP_ON_COMPUTER;
+               }
+            }
+         }
+      }
+
+   LOOP_ON_DNS:
+   for my $dns ('legi.grenoble-inp.fr', 'hmg.priv') {
+      LOOP_ON_IP:
+      for (shell_command("host -t A -l $dns")) {
+         # smtp2.legi.grenoble-inp.fr has address 194.254.67.37
+         next if not m/has address/;
+         next if not m/^(\w[\w-_\.]+\w)\s+has\saddress\s+(\d[\d\.]+\d)$/;
+         my ($hostname_fq, $ip) = ($1, $2);
+         control_syntax_ip($ip) or next LOOP_ON_IP;
+         if (control_exist_ip($COMPUTER_DB, $ip) == 1) {
+            printf "Unkown IP: %015s / %s\n", $ip, $hostname_fq;
+            next LOOP_ON_IP;
+            }
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: load_data_dhcp
+#Description: permet de charger le fichier de données YAML via les fichiers de configuration
+#             machines.
+#            ATTENTION: LES COMMENTAIRES DU FICHIER DISPARAITRONT.
+
+sub load_data_dhcp {
+   my ($domainset, $input_file) = @_;
+
+   my @T_mac;
+   my @T_host;
+   my @T_ip;
+   my $cpt;
+   open (FILE, "<$input_file");
+   my @buffer = <FILE>;
+   close(FILE);
+
+   for my $ligne (@buffer) {
+      #--
+      $ligne =~ s/#.*$//;
+      $ligne =~ s/\s+/ /;
+      $ligne =~ s/^\s+//;
+      next if $ligne eq '';
+
+      if ($ligne =~ /^host /) {
+         $cpt=0;
+         my @T_split = split(/host\s+/, $ligne);
+         @T_host = split(/ /, $T_split[1]);
+         chomp($T_host[0]);
+
+         $cpt++;
+         }
+
+      if ($ligne =~ /^*ethernet /) {
+         $ligne =~ s/;//g;
+         @T_mac = split(/ethernet\s+/, $ligne);
+         chomp($T_mac[1]);
+         $cpt++;
+         }
+
+      if ($ligne =~ /^*address /) {
+         $ligne =~ s/;//g;
+         @T_ip = split(/address\s+/, $ligne);
+         chomp($T_ip[1]);
+
+         $cpt++;
+         }
+
+      if ($cpt == 3) {
+         #   print "MAC $T_mac[1] HOST $T_host[0] IP $T_ip[1].\n";
+         my $mac = $T_mac[1];
+         my $hostname = $T_host[0];
+         my $ip = $T_ip[1];
+         $cpt = 0;
+
+         if ( control_exist_hostname($COMPUTER_DB, $domainset, $hostname) == 0 ) {
+            print "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+            next;
+            }
+         control_syntax_mac_address($mac) or next;
+         if ( control_exist_mac($COMPUTER_DB, $mac) == 0) {
+            print "Error: Physical MAC address already exists: $mac\n";
+            next;
+            }
+
+         control_syntax_ip($ip) or next;
+         if ( control_exist_ip($COMPUTER_DB, $ip) == 0 ) {
+            print "Error: IP address already exists: $ip\n";
+            next;
+            }
+         my $timestamp = time;
+         push @{$COMPUTER_DB->{$domainset}}, { $mac => {
+            'hostname'     => $hostname,
+            'ip'           => $ip,
+            'address_type' => 'dhcp',
+            'enabled'      => 'yes',
+            'create_time'  => $timestamp,
+            'modify_time'  => $timestamp,
+            'alias'        =>  '',
+            }};
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: load_data_pool
+#Description: permet de charger le fichier YAML via les fichiers de conf 'pool' du dhcp.
+
+sub load_data_pool {
+   my ($domainset, $input_file) = @_;
+
+   my @T_mac;
+
+   open (FILE, "<$input_file");
+   my @buffer = <FILE>;
+   close(FILE);
+
+   for my $ligne (@buffer) {
+      #--
+      $ligne =~ s/#.*$//;
+      $ligne =~ s/\s+/ /;
+      $ligne =~ s/^\s+//;
+      $ligne =~ s/;//g;
+      $ligne =~ s/"//g;
+      next if $ligne eq '';
+
+      if (($ligne =~ /^subclass/)) {
+         my @T_split = split(/ / ,$ligne);
+         my $pool = $T_split[1];
+
+         @T_mac = split(/:/ , $T_split[2]);
+         my $mac = $T_mac[1].":".$T_mac[2].":".$T_mac[3].":".$T_mac[4].":".$T_mac[5].":".$T_mac[6];
+         control_syntax_mac_address($mac) or next;
+         if (control_exist_mac($COMPUTER_DB, $mac) == 0) {
+            print "Error: Physical MAC address already exists: $mac\n";
+            next;
+            }
+
+         #--- cette partie teste si le pool existe.
+         if (not exists $COMPUTER_DB->{'pool'}{$pool}) {
+            print "Error: Create pool with create_pool command before load database: $pool\n";
+            exit;
+            }
+
+         if ($COMPUTER_DB->{'pool'}{'domain'} eq $domainset) {
+            my $timestamp = time;
+            push @{$COMPUTER_DB->{$domainset}}, { $mac => {
+               'hostname'     => $pool,
+               'ip'           => $pool,
+               'address_type' => 'pool-dhcp',
+               'enabled'      => 'yes',
+               'create_time'  => $timestamp,
+               'modify_time'  => $timestamp,
+               }};
+            }
+         else {
+            print "Ajout de la machine $mac [FAILED]\n";
+            print "Error: The pool doesn't exists: $pool, for the domain: $domainset\n";
+            }
+         }
+      }
+   }
+
+#-------------------------------------------------------------------------------
+
+sub load_data_file {
+   my ($domainset, $input_file, $type_file) = @_;
+
+   #$COMPUTER_DB
+   if ($type_file eq 'dhcp') {
+      load_data_dhcp($domainset, $input_file);
+      }
+
+   elsif ($type_file eq 'pool-dhcp') {
+      load_data_pool($domainset, $input_file);
+      }
+
+   YAML::Syck::DumpFile("$COMPUTER_YAML", $COMPUTER_DB);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_load_database {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($domainset, $input_file, $type_file);
+
+   GetOptions(
+      'domainset|d=s'   => \$domainset,
+      'filename|f=s'    => \$input_file,
+      'kind|k=s'        => \$type_file,
+      );
+
+   exit_on_error_option($help)
+      if $domainset  eq ''
+      or $input_file eq ''
+      or $type_file  eq '';
+
+   load_data_file($domainset, $input_file, $type_file);
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: backup_database
+#Description: sauvegarde et réinitialise les fichiers d'enregistrements DHCP.
+
+sub backup_database {
+   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime time;
+   $year += 1900;
+   $mon++;
+   my $date = sprintf '%04i-%02i-%02i-%02i-%02i-%02i', $year, $mon, $mday, $hour, $min, $sec;
+
+   copy($COMPUTER_YAML, "$FOLDER_BACKUP/$COMPUTER_BASENAME-$date.conf") or die "Error: Database copy backup failed: $!\n";
+   }
+
+#-------------------------------------------------------------------------------
+# HELP section
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#Nom: exit_on_error_option
+#Description: messages d'aide des options pour les différentes commandes
+
+sub exit_on_error_option {
+  my ($command) = @_;
+
+   if ($command eq 'add-dhcp') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory). Example: -d legi-sector03\n";
+      print " -h : computer hostname (mandatory if option -i != 'pool'). Example: -h info8pc154\n";
+      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A\n";
+      print " -i : internet IP address (mandatory). Possible value: classical IP address or the keyword 'pool'\n";
+      print " -p : name of the DHCP pool to which the machine belongs (mandatory if option -i == 'pool')\n";
+      print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
+      print "Example:\n";
+      print " dhcp-dns-tools add_dhcp -h most1mc130 -d legi-661 -i 194.254.66.130 -m 00:17:F2:D3:2B:FF -c '2008-07-03 Mac Book Guillaume Balleyrac (MOST)\n";
+      print " dhcp-dns-tools add_dhcp -p pool-stagiaire -i pool -d hmg.priv -m 02:00:54:55:4E:01 -c '2008-09-02 Portable Perso - Laanaia Nabil - Achim Wirth (MEIGE)\n";
+      }
+
+   elsif ($command eq 'add-float') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory)\n";
+      print " -p : name of the DHCP pool to which the machine belongs (mandatory)\n";
+      print " -m : physical MAC address (mandatory)\n";
+      print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
+      print "Example:\n";
+      print " dhcp-dns-tools add_float -p pool-stagiaire -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      }
+
+   elsif ($command eq 'add-static') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory)\n";
+      print " -i : internet IP address (mandatory)\n";
+      print " -h : computer hostname (mandatory)\n";
+      print " -m : physical MAC address (mandatory)\n";
+      print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
+      print "Example:\n";
+      print " dhcp-dns-tools add_static -h legipc1 -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      }
+
+   elsif ($command eq 'add-virtual') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory)\n";
+      print " -i : internet IP address (mandatory)\n";
+      print " -h : computer hostname (mandatory)\n";
+      print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
+      print "Example:\n";
+      print " dhcp-dns-tools add_virtual -h legipc1 -d legi-211 -i 192.168.10.1 -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      }
+
+   elsif ($command eq 'add-alias') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory)\n";
+      print " -h : computer hostname (mandatory)\n";
+      print " -a : computer alias name (mandatory)\n";
+      }
+
+   elsif ($command eq 'create-domainset') {
+      print "List of options for command: $command\n";
+      print " -d : new domain set (mandatory)\n";
+      print " -e : DNS domain name extension( mandatory). Example legi.grenoble-inp.fr\n";
+      print " -c : comment (mandatory). Example: 2016-08-22 VLAN legi-261 (INFO)\n";
+      print "Examples:\n";
+      print " dhcp-dns-tools create_domainset -d legi-264 -e legi.grenoble-inp.fr -c '2016-08-22 VLAN legi-261 (INFO)'\n";
+      }
+
+   elsif ($command eq 'create-pool') {
+      print "List of options for command: $command\n";
+      print " -p : name of the DHCP pool. Example: pool-legi-priv\n";
+      print " -d : domain set attachment for the pool. (domain set attachment must exist in file $COMPUTER_BASENAME.conf). Example: legi.grenoble-inp.fr\n";
+      print " -f : configuration filename on the DHCP server for the pool\n";
+      print " -i : adresse(s) IP ou plage d'IP. Séparateur d'adresses IP: ','. Séparateur de plage '-'\n";
+      print "Examples:\n";
+      print " dhcp-dns-tools -p pool-hmg -d hmg.priv -f pool.hmg.priv -i 192.168.10.1,192.168.10.2,192.168.10.3\n";
+      print " dhcp-dns-tools -p turbocavit -d legi-sector03 -f pool-legi-public -i 192.168.10.1-192.168.10.4\n";
+      }
+
+   elsif ($command eq 'create-pxe') {
+      print "List of options for command: $command\n";
+      print " -b : name of the PXE/BOOTP configuration. Example: most\n";
+      print " -n : internet IP address for the DHCP next-server.\n";
+      print " -f : filename on TFTP server to load at boot\n";
+      print " -c : comment (mandatory). Example: 2014-04-07 PXE Boot for CentOS (MOST)\n";
+      }
+
+   elsif ($command eq 'remove-pxe') {
+      print "List of options for command: $command\n";
+      print " -b : name of the PXE/BOOTP configuration. Example: most\n";
+      }
+
+   elsif ($command eq 'enable-pxe') {
+      print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory unless option -i)\n";
+      print " -i : internet IP address (mandatory unless option -h)\n";
+      print " -d : domain set attachment (mandatory if option -h)\n";
+      print " -b : name of the PXE/BOOTP configuration. Example: most\n";
+      }
+
+   elsif ($command eq 'disable-pxe') {
+      print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory unless option -i)\n";
+      print " -i : internet IP address (mandatory unless option -h)\n";
+      print " -d : domain set attachment (mandatory if option -h)\n";
+      }
+
+   elsif ($command eq 'create-tag') {
+      print "List of options for command: $command\n";
+      print " -t : name of the TAG (mandatory). Example: restricted\n";
+      print " -c : comment (mandatory). Example: 2014-04-07 tag restricted (INFO)\n";
+      print "tag 'universal' is intrinsic\n";
+      }
+
+   elsif ($command eq 'remove-tag') {
+      print "List of options for command: $command\n";
+      print " -b : name of the TAG. Example: restricted\n";
+      }
+
+   elsif ($command eq 'change-mac') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory). Example: -d legi-sector03\n";
+      print " -h : computer hostname (mandatory unless option -i)\n";
+      print " -i : internet IP address (mandatory unless option -h). Possible value: classical IP address or the keyword 'pool'\n";
+      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
+      }
+
+   elsif ($command eq 'change-ip') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory). Example: -d legi-sector03\n";
+      print " -h : computer hostname (mandatory)\n";
+      print " -i : new internet IP address (mandatory). Possible value: classical IP address\n";
+      }
+
+   elsif ($command eq 'change-host') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory). Example: -d legi-sector03\n";
+      print " -i : internet IP address (mandatory). Possible value: classical IP address\n";
+      print " -h : new computer hostname (mandatory)\n";
+      print "It's not possible to change hostname for computer that belongs to a pool\n";
+      }
+
+   elsif ($command eq 'change-comment') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory). Example: -d legi-sector03\n";
+      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
+      print " -c : new comment (mandatory)\n";
+      }
+
+   elsif ($command eq 'change-domainset') {
+      print "List of options for command: $command\n";
+      print " -d : new domain set attachment (mandatory). Example: -d legi-661\n";
+      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
+      print " -i : internet IP address (mandatory)\n";
+      }
+
+   elsif ($command eq 'change-tag') {
+      print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory unless option -i or -m)\n";
+      print " -d : domain set attachment (mandatory). Example: -d legi-sector03\n";
+      print " -i : internet IP address (mandatory unless option -h or -m)\n";
+      print " -m : physical MAC address (mandatory unless option -h or -i, priority). Example: -m 0F:58:AB:2A:22:11\n";
+      print " -t : list of tags separated by comma (mandatory). Example: -t internal,windows\n";
+      }
+
+   elsif ($command eq 'load-database') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment\n";
+      print " -f : input file in DHCP format\n";
+      print " -k : possible cases (kind): dhcp, pool-dhcp, fix-address\n";
+      }
+
+   elsif ($command eq 'enable-pc') {
+      print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory unless option -i)\n";
+      print " -i : internet IP address (mandatory unless option -h)\n";
+      print " -d : domain set attachment (mandatory if option -h)\n";
+      print "Examples:\n";
+      print " dhcp-dns-tools enable_pc -i 192.168.10.1\n";
+      print " dhcp-dns-tools enable_pc -d hmg.priv -h kevinpc\n";
+      }
+
+   elsif ($command eq 'enable-float') {
+      print "List of options for command: $command\n";
+      print " -m : physical MAC address (mandatory)\n";
+      print " -p : name of the DHCP pool (mandatory)\n";
+      }
+
+   elsif ($command eq 'disable-float') {
+      print "List of options for command: $command\n";
+      print " -m : physical MAC address (mandatory)\n";
+      print " -p : name of the DHCP pool (mandatory)\n";
+      }
+
+   elsif ($command eq 'disable-pc') {
+      print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory unless option -i)\n";
+      print " -i : internet IP address (mandatory unless option -h)\n";
+      print " -d : domain set attachment (mandatory if option -h)\n";
+      print "Examples:\n";
+      print " dhcp-dns-tools disable_pc -i 192.168.10.1\n";
+      print " dhcp-dns-tools disable_pc -d hmg.priv -h kevinpc\n";
+      }
+
+   elsif ($command eq 'del-pc') {
+      print "List of options for command: $command\n";
+      print " -d : domain set attachment (mandatory)\n";
+      print " -h : computer hostname (mandatory unless option -i)\n";
+      print " -i : internet IP address (mandatory unless option -h)\n";
+      }
+
+   elsif ($command eq 'del-float') {
+      print "List of options for command: $command\n";
+      print " -m : physical MAC address (mandatory)l\n";
+      print " -p : name of the DHCP pool\n";
+      }
+
+   elsif ($command eq 'search-mac') {
+      print "List of options for command: $command\n";
+      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
+      }
+
+   else {
+      print "No help for command: $command\n";
+      }
+   exit;
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_version {
+
+   print <<'END';
+dhcp-dns-tools - management of computer names and IP addresses
+Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
+License GNU GPL version 2 or later and Perl equivalent
+END
+
+   print "Version $VERSION\n\n";
+   print ' $Id: klask 397 2018-02-28 18:53:47Z g7moreau $'."\n";
+   return;
+   }
+
+#-------------------------------------------------------------------------------
+#Nom: usage
+#Description: message d'aide sur les commandes du script
+
+sub cmd_help {
+   print <<END;
+dhcp-dns-tools - management of computer names and IP addresses
+
+ dhcp-dns-tools add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
+ dhcp-dns-tools add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
+ dhcp-dns-tools change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ dhcp-dns-tools change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ dhcp-dns-tools change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ dhcp-dns-tools check-dns
+ dhcp-dns-tools create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ dhcp-dns-tools create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ dhcp-dns-tools create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
+ dhcp-dns-tools create-tag [--tag|-t tag] [--comment|-c comment]
+ dhcp-dns-tools del-float [--pool|-p pool] [--mac|-m mac]
+ dhcp-dns-tools del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools disable-float [--pool|-p pool] [--mac|-m mac]
+ dhcp-dns-tools disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools enable-float [--pool|-p pool] [--mac|-m mac]
+ dhcp-dns-tools enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
+ dhcp-dns-tools gen-dhcp-file
+ dhcp-dns-tools gen-dns-file
+ dhcp-dns-tools help
+ dhcp-dns-tools load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
+ dhcp-dns-tools remove-pxe [--bootp|-b pxe_config]
+ dhcp-dns-tools remove-tag [--tag|-t tag]
+ dhcp-dns-tools search-mac [--mac|-m mac]
+ dhcp-dns-tools show-domainset
+ dhcp-dns-tools show
+ dhcp-dns-tools show-pool [--no-header|-H]
+ dhcp-dns-tools show-pxe [--no-header|-H]
+ dhcp-dns-tools show-tag [--no-header|-H]
+ dhcp-dns-tools version
+
+COMMANDS
+
+ * add-alias        : add an alias for a computer (like CNAME for the DNS)
+ * add-dhcp         : add a computer with a fix DHCP IP or in a DHCP pool
+ * add-float        : add a computer with an IP in a DHCP pool
+ * add-static       : add a computer with a static IP
+ * add-virtual      : add a virtual computer with a static IP but a virtual MAC (useful to declare float computer in DNS)
+ * change-comment   : change the computer comment
+ * change-domainset : change the domain set attachment for a computer
+ * change-host      : change the computer hostname
+ * change-ip        : change the computer IP address
+ * change-mac       : change the computer physical MAC address
+ * change-tag       : change the list of TAGs associated to a computer
+ * check-dns        : check the DNS table for base IPs
+ * create-domainset : create a new domain set
+ * create-pool      : create a new pool for DHCP records
+ * create-pxe       : create a new PXE/BOOTP configuration
+ * create-tag       : create a new TAG
+ * del-float        : remove a computer from a DHCP pool
+ * del-pc           : remove a computer (DHCP or static IP) from the YAML database
+ * disable-pc       : disable a computer (DHCP and/or DNS) (but keep it in the database)
+ * disable-float    : disable a computer from a DHCP pool (but keep it in the database)
+ * disable-pxe      : remove PXE/BOOTP configuration on a computer
+ * enable-float     : enable a previous disable computer (DHCP and/or DNS)
+ * enable-pc        : enable a previous disable computer (DHCP and/or DNS)
+ * enable-pxe       : enable PXE/BOOTP configuration on a computer
+ * gen-dhcp-file    : generate DHCP files for the isc DHCP server
+ * gen-dns-file     : generate DNS files for the bind domain server
+ * help             : this help
+ * load-database    : load the YAML database (be careful)
+ * remove-pxe       : remove a PXE/BOOTP configuration
+ * remove-tag       : remove a TAG
+ * search-mac       : search physical MAC address computer
+ * show-domainset   : list all domain set group of computer
+ * show             : list all computers
+ * show-pool        : list all pool
+ * show-pxe         : list PXE/BOOTP configuration
+ * show-tag         : list all TAGs
+ * version          : return program version
+END
+   return;
+   }
+
+################################################################
+# documentation
+################################################################
+
+__END__
+
+=head1 NAME
+
+dhcp-dns-tools - management of computer names and IP addresses
+
+=head1 USAGE
+
+ dhcp-dns-tools add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
+ dhcp-dns-tools add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
+ dhcp-dns-tools change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ dhcp-dns-tools change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ dhcp-dns-tools change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ dhcp-dns-tools change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ dhcp-dns-tools check-dns
+ dhcp-dns-tools create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ dhcp-dns-tools create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ dhcp-dns-tools create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
+ dhcp-dns-tools create-tag [--tag|-t tag] [--comment|-c comment]
+ dhcp-dns-tools del-float [--pool|-p pool] [--mac|-m mac]
+ dhcp-dns-tools del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools disable-float [--pool|-p pool] [--mac|-m mac]
+ dhcp-dns-tools disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools enable-float [--pool|-p pool] [--mac|-m mac]
+ dhcp-dns-tools enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ dhcp-dns-tools enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
+ dhcp-dns-tools gen-dhcp-file
+ dhcp-dns-tools gen-dns-file
+ dhcp-dns-tools help
+ dhcp-dns-tools load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
+ dhcp-dns-tools remove-pxe [--bootp|-b pxe_config]
+ dhcp-dns-tools remove-tag [--tag|-t tag]
+ dhcp-dns-tools search-mac [--mac|-m mac]
+ dhcp-dns-tools show-domainset
+ dhcp-dns-tools show
+ dhcp-dns-tools show-pool [--no-header|-H]
+ dhcp-dns-tools show-pxe [--no-header|-H]
+ dhcp-dns-tools show-tag [--no-header|-H]
+ dhcp-dns-tools version
+
+=head1 COMMANDS
+
+
+=head1 AUTHORS
+
+Written by Gabriel Moreau, Kevin Reverchon, Grenoble - France
+
+
+=head1 LICENSE AND COPYRIGHT
+
+Licence GNU GPL version 2 or later and Perl equivalent
+
+Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>.
