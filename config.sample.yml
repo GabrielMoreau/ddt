@@ -1,0 +1,14 @@
+# config file ~/.config/ddt/config.yml
+--- 
+database:
+   basename: easy-dhcp-dns
+   ext: conf
+   folder: /usr/local/dhcp-dns-tools
+   backup: /usr/local/dhcp-dns-tools/backup  
+
+generate:  
+   dhcp: /usr/local/dhcp-dns-tools/dhcp
+   dns: /usr/local/dhcp-dns-tools/dns
+
+script:
+   update: /usr/local/bin/update-dhcp-server

@@ -2,34 +2,29 @@ DESTDIR=
 
 BINDIR=/usr/bin
 MANDIR=/usr/share/man/man1
-SHAREDIR=/usr/share/project-meta
-ETCDIR=/etc/project-meta
+SHAREDIR=/usr/share/ddt
 COMPDIR=/etc/bash_completion.d
 
 .PHONY: all ignore install update sync upload stat help pkg
 
 all:
-	pod2man project-meta | gzip > project-meta.1.gz
-	pod2html project-meta > project-meta.html
+	pod2man ddt | gzip > ddt.1.gz
+	pod2html ddt > ddt.html
 
 install: update
 
 update:
 	@install -d -m 0755 -o root -g root $(DESTDIR)/$(SHAREDIR)
-	@install -d -m 0755 -o root -g root $(DESTDIR)/$(SHAREDIR)/license.d
-	@install -d -m 0755 -o root -g root $(DESTDIR)/$(SHAREDIR)/template.d
 	@install -d -m 0755 -o root -g root $(DESTDIR)/$(MANDIR)
 	@install -d -m 0755 -o root -g root $(DESTDIR)/$(COMPDIR)
 
-	install    -m 0755 -o root -g root project-meta $(DESTDIR)/$(BINDIR)
+	install    -m 0755 -o root -g root ddt $(DESTDIR)/$(BINDIR)
 
-	install    -m 0644 -o root -g root project-meta.1.gz $(DESTDIR)/$(MANDIR)
+	install    -m 0644 -o root -g root ddt.1.gz $(DESTDIR)/$(MANDIR)
 
-	install    -m 0644 -o root -g root PROJECT-META.sample.yml $(DESTDIR)/$(SHAREDIR)
-	install    -m 0644 -o root -g root license.d/*.txt $(DESTDIR)/$(SHAREDIR)/license.d
-	install    -m 0644 -o root -g root template.d/*.tt $(DESTDIR)/$(SHAREDIR)/template.d
+	install    -m 0644 -o root -g root config.sample.yml $(DESTDIR)/$(SHAREDIR)
 
-	install    -m 0644 -o root -g root project-meta.bash_completion $(DESTDIR)/$(COMPDIR)/project-meta
+	install    -m 0644 -o root -g root ddt.bash_completion $(DESTDIR)/$(COMPDIR)/ddt
 
 sync:
 	svn update
