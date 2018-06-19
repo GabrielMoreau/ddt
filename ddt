@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.9.3');
+use version; our $VERSION = version->declare('0.9.4');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1013,7 +1013,7 @@ sub cmd_change_tag {
       }
 
    control_exist_domainset($COMPUTER_DB, $domainset) or exit;
-   
+
    $mac = get_mac_from_ip($domainset, $ip, $mac)             if $ip ne '';
    $mac = get_mac_from_hostname($domainset, $hostname, $mac) if $hostname ne '';
    control_syntax_mac_address($mac) or exit;
@@ -1634,7 +1634,7 @@ sub cmd_show_pool {
    printf "%-17s %-17s %s\n", 'Pool', 'File', 'DNS-Domain' if not $no_header;
    LOOP_ON_PXE:
    for my $pool ( keys %{$COMPUTER_DB->{'pool'}} ) {
-      
+
       printf "%-17s %-17s %s\n",
          $pool,
          $COMPUTER_DB->{'pool'}{$pool}{'file'},
@@ -1742,7 +1742,7 @@ sub cmd_show_pxe {
       my $ip_next_server = $COMPUTER_DB->{'pxe'}{$pxe_config}{'ip_next_server'};
       my $filename       = $COMPUTER_DB->{'pxe'}{$pxe_config}{'filename'};
       my $comment        = $COMPUTER_DB->{'pxe'}{$pxe_config}{'comment'};
-      
+
       printf "%-12s %-13s %-30s %s\n", $pxe_config, $ip_next_server, $filename, $comment;
       }
    }
@@ -1872,7 +1872,7 @@ sub cmd_disable_pxe {
             for my $id (keys %{$computer}) {
                if ($computer->{$id}->{'ip'} eq $ip) {
                   next if not exists $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'pxe_config'};
-                  
+
                   my $pxe_config = $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'pxe_config'};
                   my $timestamp  = time;
                   $COMPUTER_DB->{$domain_name}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
@@ -1896,7 +1896,7 @@ sub cmd_disable_pxe {
          for my $id (keys %{$value}) {
             if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
                next if not exists $value->{$id}->{'pxe_config'};
-               
+
                my $pxe_config = $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'pxe_config'};
                my $timestamp  = time;
                $COMPUTER_DB->{$domainset}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
@@ -2275,7 +2275,7 @@ sub cmd_generate_dhcp_file {
                   $buffer  = "host $hostname {\n"; # deny-unknown-clients;
                   $buffer .= "   hardware ethernet $mac_addres;\n";
                   $buffer .= "   fixed-address $ip;\n";
-                  
+
                   if (exists $value->{$mac_addres}{'pxe_config'}) {
                      my $pxe_config     = $value->{$mac_addres}{'pxe_config'};
                      my $ip_next_server = $COMPUTER_DB->{'pxe'}{$pxe_config}{'ip_next_server'};
@@ -2394,7 +2394,7 @@ sub cmd_generate_dns_file {
                my $comment  = $value->{$id}->{'comment'};
                my $address_type = $value->{$id}->{'address_type'};
                my $enabled      = $value->{$id}->{'enabled'};
-               
+
                my $dns_domain = $domain_name;
                if (exists $COMPUTER_DB->{'dset'}{$domain_name}) {
                   $dns_domain = $COMPUTER_DB->{'dset'}{$domain_name}{'dns_extension'};
@@ -2935,7 +2935,7 @@ License GNU GPL version 2 or later and Perl equivalent
 END
 
    print "Version $VERSION\n\n";
-   print ' $Id: klask 397 2018-02-28 18:53:47Z g7moreau $'."\n";
+   print ' $Id$'."\n";
    return;
    }
 

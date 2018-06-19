@@ -52,3 +52,4 @@ help:
 
 ignore: svnignore.txt
 	svn propset svn:ignore -F svnignore.txt .
+	svn propset svn:keywords "Id" ddt
