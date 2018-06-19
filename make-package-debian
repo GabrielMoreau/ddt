@@ -38,7 +38,7 @@ Tag: implemented-in::perl, interface::commandline, role::program
 Priority: optional
 Depends: perl, perl-base, perl-modules, libyaml-syck-perl, libnet-netmask-perl, libreadonly-perl, libfile-touch-perl
 Suggests: libyaml-shell-perl | yamllint, perl-doc
-Architecture: amd64
+Architecture: all
 Installed-Size: $(du -ks ${tmp_folder}|cut -f 1)
 Maintainer: Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
 Description: ddt - management of computer names and IP addresses
@@ -56,12 +56,14 @@ rm -f ${tmp_folder}/control.tar.gz
 echo 2.0 > ${tmp_folder}/debian-binary
 
 # Create package (control before data)
-ar -r ddt_${DDT_VERSION}-${LOCAL_VERSION}_amd64.deb ${tmp_folder}/debian-binary ${tmp_folder}/control.tar.gz ${tmp_folder}/data.tar.gz
+ar -r ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb ${tmp_folder}/debian-binary ${tmp_folder}/control.tar.gz ${tmp_folder}/data.tar.gz
       
 # Clean
 rm -rf ${tmp_folder}
 
 # Prepare reprepro upload
 echo "# Prepare reprepro upload"
-echo "( cd /srv/www/debian/ ; reprepro includedeb jessie ~/jessie/ddt_${DDT_VERSION}-${LOCAL_VERSION}_amd64.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb wheezy   ~/wheezy/ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb jessie   ~/jessie/ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb stretch ~/stretch/ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb )"
 echo "( cd /srv/www/debian/ ; reprepro dumpreferences ) | grep -i ddt"
