@@ -2,6 +2,8 @@
 #
 # Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
 # License GNU GPL version 2 or later and Perl equivalent
+#
+# apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl
 
 package DDT::RE;
 
@@ -18,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = qv('0.9.2');
+use version; our $VERSION = version->declare('0.9.3');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2711,8 +2713,8 @@ sub exit_on_error_option {
       print " -p : name of the DHCP pool to which the machine belongs (mandatory if option -i == 'pool')\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " dhcp-dns-tools add_dhcp -h most1mc130 -d legi-661 -i 194.254.66.130 -m 00:17:F2:D3:2B:FF -c '2008-07-03 Mac Book Guillaume Balleyrac (MOST)\n";
-      print " dhcp-dns-tools add_dhcp -p pool-stagiaire -i pool -d hmg.priv -m 02:00:54:55:4E:01 -c '2008-09-02 Portable Perso - Laanaia Nabil - Achim Wirth (MEIGE)\n";
+      print " ddt add_dhcp -h most1mc130 -d legi-661 -i 194.254.66.130 -m 00:17:F2:D3:2B:FF -c '2008-07-03 Mac Book Guillaume Balleyrac (MOST)\n";
+      print " ddt add_dhcp -p pool-stagiaire -i pool -d hmg.priv -m 02:00:54:55:4E:01 -c '2008-09-02 Portable Perso - Laanaia Nabil - Achim Wirth (MEIGE)\n";
       }
 
    elsif ($command eq 'add-float') {
@@ -2722,7 +2724,7 @@ sub exit_on_error_option {
       print " -m : physical MAC address (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " dhcp-dns-tools add_float -p pool-stagiaire -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add_float -p pool-stagiaire -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-static') {
@@ -2733,7 +2735,7 @@ sub exit_on_error_option {
       print " -m : physical MAC address (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " dhcp-dns-tools add_static -h legipc1 -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add_static -h legipc1 -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-virtual') {
@@ -2743,7 +2745,7 @@ sub exit_on_error_option {
       print " -h : computer hostname (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " dhcp-dns-tools add_virtual -h legipc1 -d legi-211 -i 192.168.10.1 -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add_virtual -h legipc1 -d legi-211 -i 192.168.10.1 -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-alias') {
@@ -2759,7 +2761,7 @@ sub exit_on_error_option {
       print " -e : DNS domain name extension( mandatory). Example legi.grenoble-inp.fr\n";
       print " -c : comment (mandatory). Example: 2016-08-22 VLAN legi-261 (INFO)\n";
       print "Examples:\n";
-      print " dhcp-dns-tools create_domainset -d legi-264 -e legi.grenoble-inp.fr -c '2016-08-22 VLAN legi-261 (INFO)'\n";
+      print " ddt create_domainset -d legi-264 -e legi.grenoble-inp.fr -c '2016-08-22 VLAN legi-261 (INFO)'\n";
       }
 
    elsif ($command eq 'create-pool') {
@@ -2769,8 +2771,8 @@ sub exit_on_error_option {
       print " -f : configuration filename on the DHCP server for the pool\n";
       print " -i : adresse(s) IP ou plage d'IP. Séparateur d'adresses IP: ','. Séparateur de plage '-'\n";
       print "Examples:\n";
-      print " dhcp-dns-tools -p pool-hmg -d hmg.priv -f pool.hmg.priv -i 192.168.10.1,192.168.10.2,192.168.10.3\n";
-      print " dhcp-dns-tools -p turbocavit -d legi-sector03 -f pool-legi-public -i 192.168.10.1-192.168.10.4\n";
+      print " ddt -p pool-hmg -d hmg.priv -f pool.hmg.priv -i 192.168.10.1,192.168.10.2,192.168.10.3\n";
+      print " ddt -p turbocavit -d legi-sector03 -f pool-legi-public -i 192.168.10.1-192.168.10.4\n";
       }
 
    elsif ($command eq 'create-pxe') {
@@ -2872,8 +2874,8 @@ sub exit_on_error_option {
       print " -i : internet IP address (mandatory unless option -h)\n";
       print " -d : domain set attachment (mandatory if option -h)\n";
       print "Examples:\n";
-      print " dhcp-dns-tools enable_pc -i 192.168.10.1\n";
-      print " dhcp-dns-tools enable_pc -d hmg.priv -h kevinpc\n";
+      print " ddt enable_pc -i 192.168.10.1\n";
+      print " ddt enable_pc -d hmg.priv -h kevinpc\n";
       }
 
    elsif ($command eq 'enable-float') {
@@ -2894,8 +2896,8 @@ sub exit_on_error_option {
       print " -i : internet IP address (mandatory unless option -h)\n";
       print " -d : domain set attachment (mandatory if option -h)\n";
       print "Examples:\n";
-      print " dhcp-dns-tools disable_pc -i 192.168.10.1\n";
-      print " dhcp-dns-tools disable_pc -d hmg.priv -h kevinpc\n";
+      print " ddt disable_pc -i 192.168.10.1\n";
+      print " ddt disable_pc -d hmg.priv -h kevinpc\n";
       }
 
    elsif ($command eq 'del-pc') {
@@ -2927,7 +2929,7 @@ sub exit_on_error_option {
 sub cmd_version {
 
    print <<'END';
-dhcp-dns-tools - management of computer names and IP addresses
+ddt - management of computer names and IP addresses
 Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
 License GNU GPL version 2 or later and Perl equivalent
 END
@@ -2943,45 +2945,45 @@ END
 
 sub cmd_help {
    print <<END;
-dhcp-dns-tools - management of computer names and IP addresses
+ddt - management of computer names and IP addresses
 
- dhcp-dns-tools add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
- dhcp-dns-tools add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
- dhcp-dns-tools change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
- dhcp-dns-tools change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
- dhcp-dns-tools change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
- dhcp-dns-tools check-dns
- dhcp-dns-tools create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
- dhcp-dns-tools create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
- dhcp-dns-tools create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
- dhcp-dns-tools create-tag [--tag|-t tag] [--comment|-c comment]
- dhcp-dns-tools del-float [--pool|-p pool] [--mac|-m mac]
- dhcp-dns-tools del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools disable-float [--pool|-p pool] [--mac|-m mac]
- dhcp-dns-tools disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools enable-float [--pool|-p pool] [--mac|-m mac]
- dhcp-dns-tools enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
- dhcp-dns-tools gen-dhcp-file
- dhcp-dns-tools gen-dns-file
- dhcp-dns-tools help
- dhcp-dns-tools load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
- dhcp-dns-tools remove-pxe [--bootp|-b pxe_config]
- dhcp-dns-tools remove-tag [--tag|-t tag]
- dhcp-dns-tools search-mac [--mac|-m mac]
- dhcp-dns-tools show-domainset
- dhcp-dns-tools show
- dhcp-dns-tools show-pool [--no-header|-H]
- dhcp-dns-tools show-pxe [--no-header|-H]
- dhcp-dns-tools show-tag [--no-header|-H]
- dhcp-dns-tools version
+ ddt add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
+ ddt add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ ddt add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
+ ddt change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ ddt change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ ddt change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt check-dns
+ ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
+ ddt create-tag [--tag|-t tag] [--comment|-c comment]
+ ddt del-float [--pool|-p pool] [--mac|-m mac]
+ ddt del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt disable-float [--pool|-p pool] [--mac|-m mac]
+ ddt disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt enable-float [--pool|-p pool] [--mac|-m mac]
+ ddt enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt gen-dhcp-file
+ ddt gen-dns-file
+ ddt help
+ ddt load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
+ ddt remove-pxe [--bootp|-b pxe_config]
+ ddt remove-tag [--tag|-t tag]
+ ddt search-mac [--mac|-m mac]
+ ddt show-domainset
+ ddt show
+ ddt show-pool [--no-header|-H]
+ ddt show-pxe [--no-header|-H]
+ ddt show-tag [--no-header|-H]
+ ddt version
 
 COMMANDS
 
@@ -3034,47 +3036,47 @@ __END__
 
 =head1 NAME
 
-dhcp-dns-tools - management of computer names and IP addresses
+ddt - management of computer names and IP addresses
 
 =head1 USAGE
 
- dhcp-dns-tools add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
- dhcp-dns-tools add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
- dhcp-dns-tools change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
- dhcp-dns-tools change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
- dhcp-dns-tools change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
- dhcp-dns-tools change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
- dhcp-dns-tools check-dns
- dhcp-dns-tools create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
- dhcp-dns-tools create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
- dhcp-dns-tools create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
- dhcp-dns-tools create-tag [--tag|-t tag] [--comment|-c comment]
- dhcp-dns-tools del-float [--pool|-p pool] [--mac|-m mac]
- dhcp-dns-tools del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools disable-float [--pool|-p pool] [--mac|-m mac]
- dhcp-dns-tools disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools enable-float [--pool|-p pool] [--mac|-m mac]
- dhcp-dns-tools enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
- dhcp-dns-tools enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
- dhcp-dns-tools gen-dhcp-file
- dhcp-dns-tools gen-dns-file
- dhcp-dns-tools help
- dhcp-dns-tools load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
- dhcp-dns-tools remove-pxe [--bootp|-b pxe_config]
- dhcp-dns-tools remove-tag [--tag|-t tag]
- dhcp-dns-tools search-mac [--mac|-m mac]
- dhcp-dns-tools show-domainset
- dhcp-dns-tools show
- dhcp-dns-tools show-pool [--no-header|-H]
- dhcp-dns-tools show-pxe [--no-header|-H]
- dhcp-dns-tools show-tag [--no-header|-H]
- dhcp-dns-tools version
+ ddt add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
+ ddt add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ ddt add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
+ ddt change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+ ddt change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ ddt change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+ ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt check-dns
+ ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
+ ddt create-tag [--tag|-t tag] [--comment|-c comment]
+ ddt del-float [--pool|-p pool] [--mac|-m mac]
+ ddt del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt disable-float [--pool|-p pool] [--mac|-m mac]
+ ddt disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt enable-float [--pool|-p pool] [--mac|-m mac]
+ ddt enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+ ddt enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt gen-dhcp-file
+ ddt gen-dns-file
+ ddt help
+ ddt load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
+ ddt remove-pxe [--bootp|-b pxe_config]
+ ddt remove-tag [--tag|-t tag]
+ ddt search-mac [--mac|-m mac]
+ ddt show-domainset
+ ddt show
+ ddt show-pool [--no-header|-H]
+ ddt show-pxe [--no-header|-H]
+ ddt show-tag [--no-header|-H]
+ ddt version
 
 =head1 COMMANDS
 
