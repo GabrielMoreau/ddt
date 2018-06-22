@@ -131,23 +131,28 @@ sub config_load {
 sub ipamdb_load {
    my $database_file = shift;
 
-   my $computerdb = YAML::Syck::LoadFile($database_file);
+   my $computer_db = YAML::Syck::LoadFile($database_file);
 
-   return $computerdb;
+   # add database version if not exist
+   if (not exists $computer_db->{'version'}) {
+      $computer_db->{'version'} = 1;
+      }
+
+   return $computer_db;
    }
 
 #---------------------------------------------------------------
 # Save computer database
 
 sub ipamdb_save {
-   my ($database_file, $computerdb) = @_;
+   my ($database_file, $computer_db) = @_;
 
    my $dirdb = $database_file;
       $dirdb =~ s{ / [^/]* $}{}xms;
    mkdir "$dirdb", 0755 unless -d "$dirdb";
-   YAML::Syck::DumpFile($database_file, $computerdb);
+   YAML::Syck::DumpFile($database_file, $computer_db);
 
-   return $computerdb;
+   return $computer_db;
    }
 
 #--------------------------------------------------------------------------------
@@ -212,6 +217,7 @@ sub control_exist_mac {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
       for my $value (@domainsetdb) {
@@ -239,6 +245,7 @@ sub control_exist_ip {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       for my $value (@{$COMPUTER_DB->{$domainset_current}}) {
          for my $id (keys %{$value}) {
@@ -988,6 +995,7 @@ sub cmd_change_domainset {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
       my $cpt_mac = 0;
@@ -1095,6 +1103,7 @@ sub disable_pc {
          next if $domainset_current eq 'pool';
          next if $domainset_current eq 'pxe';
          next if $domainset_current eq 'tag';
+         next if $domainset_current eq 'version';
 
          my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
          my $cpt_mac = 0;
@@ -1160,6 +1169,7 @@ sub disable_float {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
 
@@ -1209,6 +1219,7 @@ sub enable_pc {
          next if $domainset_current eq 'pool';
          next if $domainset_current eq 'pxe';
          next if $domainset_current eq 'tag';
+         next if $domainset_current eq 'version';
 
          my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
          my $cpt_mac=0;
@@ -1272,6 +1283,7 @@ sub enable_float {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
 
@@ -1470,6 +1482,7 @@ sub del_float {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
 
@@ -1746,6 +1759,7 @@ sub cmd_remove_pxe {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       LOOP_ON_COMPUTER:
       for my $computer (@{$COMPUTER_DB->{$domainset_current}}) {
@@ -1824,6 +1838,7 @@ sub cmd_enable_pxe {
          next if $domainset_current eq 'pool';
          next if $domainset_current eq 'pxe';
          next if $domainset_current eq 'tag';
+         next if $domainset_current eq 'version';
 
          my $cpt_mac = 0;
          for my $computer (@{$COMPUTER_DB->{$domainset_current}}) {
@@ -1903,6 +1918,7 @@ sub cmd_disable_pxe {
          next if $domainset_current eq 'pool';
          next if $domainset_current eq 'pxe';
          next if $domainset_current eq 'tag';
+         next if $domainset_current eq 'version';
 
          my $cpt_mac = 0;
          for my $computer (@{$COMPUTER_DB->{$domainset_current}}) {
@@ -2018,6 +2034,7 @@ sub cmd_remove_tag {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       LOOP_ON_COMPUTER:
       for my $computer (@{$COMPUTER_DB->{$domainset_current}}) {
@@ -2067,6 +2084,7 @@ sub cmd_upgrade_db {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
 
@@ -2105,6 +2123,7 @@ sub cmd_show_domainset {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       print "$domainset_current\n";
       }
@@ -2135,6 +2154,7 @@ sub cmd_search_mac {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
 
@@ -2185,6 +2205,7 @@ sub cmd_show_host {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       print "\n# *** List of computers in the domain set: $domainset_current ***\n";
       printf "%-30s  %-20s %17s %5s %7s %-10s %s\n",
@@ -2288,6 +2309,7 @@ sub cmd_generate_dhcp_file {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       open FILE_VLAN, '>', "$FOLDER_GEN_DHCP/$domainset_current";
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
@@ -2391,6 +2413,7 @@ sub cmd_generate_dns_file {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       if ($domainset_current eq 'pool') {
          #next;
@@ -2488,6 +2511,7 @@ sub cmd_check_dns {
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
+      next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$COMPUTER_DB->{$domainset_current}};
 
