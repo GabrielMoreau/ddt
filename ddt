@@ -3095,10 +3095,158 @@ and entries could be added, deleted, or modified by the command line.
 
 =head1 COMMANDS
 
+=head2 add-alias
+
+ ddt add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
+
+=head2 add-dhcp
+
+ ddt add-dhcp [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+
+=head2 add-float
+
+ ddt add-float [--pool|-p pool] [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+
+=head2 add-static
+
+ ddt add-static [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+
+=head2 add-virtual
+
+ ddt add-virtual [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--comment|-c comment]
+
+=head2 change-comment
+
+ ddt change-comment [--domainset|-d domainset] [--mac|-m mac] [--comment|-c comment]
+
+=head2 change-domainset
+
+ ddt change-domainset [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+
+=head2 change-host
+
+ ddt change-host [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+
+=head2 change-ip
+
+ ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+
+=head2 change-mac
+
+ ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
+
+=head2 change-tag
+
+ ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+
+=head2 check-dns
+
+ ddt check-dns
+
+=head2 create-domainset
+
+ ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
+
+=head2 create-pool
+
+ ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+
+=head2 create-pxe
+
+ ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
+
+=head2 create-tag
+
+ ddt create-tag [--tag|-t tag] [--comment|-c comment]
+
+=head2 del-float
+
+ ddt del-float [--pool|-p pool] [--mac|-m mac]
+
+=head2 del-pc
+
+ ddt del-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+
+=head2 disable-pc
+
+ ddt disable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+
+=head2 disable-float
+
+ ddt disable-float [--pool|-p pool] [--mac|-m mac]
+
+=head2 disable-pxe
+
+ ddt disable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+
+=head2 enable-float
+
+ ddt enable-float [--pool|-p pool] [--mac|-m mac]
+
+=head2 enable-pc
+
+ ddt enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
+
+=head2 enable-pxe
+
+ ddt enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
+
+=head2 gen-dhcp-file
+
+ ddt gen-dhcp-file
+
+=head2 gen-dns-file
+
+ ddt gen-dns-file
+
+=head2 help
+
+ ddt help
+
+=head2 load-database
+
+ ddt load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
+
+=head2 remove-pxe
+
+ ddt remove-pxe [--bootp|-b pxe_config]
+
+=head2 remove-tag
+
+ ddt remove-tag [--tag|-t tag]
+
+=head2 search-mac
+
+ ddt search-mac [--mac|-m mac]
+
+=head2 show-domainset
+
+ ddt show-domainset
+
+=head2 show
+
+ ddt show
+
+=head2 show-pool
+
+ ddt show-pool [--no-header|-H]
+
+=head2 show-pxe
+
+ ddt show-pxe [--no-header|-H]
+
+=head2 show-tag
+
+ ddt show-tag [--no-header|-H]
+
+=head2 version
+
+ ddt version
+
 
 =head1 AUTHORS
 
-Written by Gabriel Moreau, Kevin Reverchon, Grenoble - France
+Written by Gabriel Moreau, Kevin Reverchon, Olivier De-Marchi - Grenoble - France
 
 
 =head1 LICENSE AND COPYRIGHT
