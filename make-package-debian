@@ -39,7 +39,7 @@ Section: utils
 Tag: implemented-in::perl, interface::commandline, role::program
 Priority: optional
 Depends: perl, perl-base, perl-modules, libyaml-syck-perl, libnet-netmask-perl, libreadonly-perl, libfile-touch-perl
-Suggests: libyaml-shell-perl | yamllint, perl-doc
+Suggests: libyaml-shell-perl | yamllint, perl-doc, isc-dhcp-server, bind9
 Architecture: all
 Installed-Size: $(du -ks ${tmp_folder}|cut -f 1)
 Maintainer: Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
