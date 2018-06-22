@@ -12,7 +12,7 @@ tmp_folder=$(mktemp --directory /tmp/ddt-XXXXXX)
 
 # Set Version
 DDT_VERSION=$(grep 'version->declare' ddt | cut -f 2 -d "'") #'
-LOCAL_VERSION=3
+LOCAL_VERSION=4
 
 # Create future tree
 mkdir -p ${tmp_folder}/usr/bin
@@ -50,7 +50,7 @@ Description: dhcp-dns-tools management of computer names and IP addresses
  ddt (dhcp-dns-tools) is a small tool to maintain a set of computers/IP.
  In order to help you in this task, ddt command has a set of action
  to generated DHCP and DNS configuration files.
-
+ .
  The tool is quite effective and tries to keep things simple
  but easily configurable for your site like a swiss army knife.
  Everything is saved in a YAML database
