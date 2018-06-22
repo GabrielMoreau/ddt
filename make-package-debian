@@ -24,6 +24,8 @@ cp ddt.1.gz             ${tmp_folder}/usr/share/man/man1/
 cp LICENSE.txt          ${tmp_folder}/usr/share/ddt/
 cp config.sample.yml    ${tmp_folder}/usr/share/ddt/
 cp ddt.bash_completion  ${tmp_folder}/etc/bash_completion.d/
+(cd ${tmp_folder}/usr/bin;            ln -s ddt      dhcp-dns-tools)
+(cd ${tmp_folder}/usr/share/man/man1; ln -s ddt.1.gz dhcp-dns-tools.1.gz)
 
 # Data archive
 rm -f ${tmp_folder}/data.tar.gz
@@ -41,10 +43,18 @@ Suggests: libyaml-shell-perl | yamllint, perl-doc
 Architecture: all
 Installed-Size: $(du -ks ${tmp_folder}|cut -f 1)
 Maintainer: Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
-Description: ddt - management of computer names and IP addresses
- ddt (dhcp-dns-tools) is a small tool to maintain a set of computers/IP.
- In order to help you in this task, ddt command has a set of action
- to generated DHCP and DNS configuration files.
+Description: dhcp-dns-tools management of computer names and IP addresses
+DDT is an acronym for DHCP-DNS-Tools.
+In practise, DDT is an IP Address Management (IPAM) service.
+It has been used in the LEGI laboratory for over 10 years.
+ddt (dhcp-dns-tools) is a small tool to maintain a set of computers/IP.
+In order to help you in this task, ddt command has a set of action
+to generated DHCP and DNS configuration files.
+
+The tool is quite effective and tries to keep things simple
+but easily configurable for your site like a swiss army knife.
+Everything is saved in a YAML database
+and entries could be added, deleted, or modified by the command line.
 Homepage: http://servforge.legi.grenoble-inp.fr/projects/soft-trokata/wiki/SoftWare/DDT
 END
 

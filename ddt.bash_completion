@@ -43,4 +43,6 @@ _ddt() {
       COMPREPLY=($(compgen -W "$($(which ddt||echo /usr/local/bin/ddt) help|grep '^ ddt'|awk '{print $2}'|xargs echo -n)" -- "$cur"))
    fi
 
-   } && complete -F _dhcp_dns_tools ddt
+   } && complete -F _ddt ddt
+
+have dhcp-dns-tools && complete -F _ddt dhcp-dns-tools

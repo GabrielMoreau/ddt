@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.9.4');
+use version; our $VERSION = version->declare('0.9.5');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -3038,6 +3038,7 @@ __END__
 
 ddt - management of computer names and IP addresses
 
+
 =head1 USAGE
 
  ddt add-alias [--hostname|-h hostname] [--domainset|-d domainset] [--alias|-a alias]
@@ -3077,6 +3078,20 @@ ddt - management of computer names and IP addresses
  ddt show-pxe [--no-header|-H]
  ddt show-tag [--no-header|-H]
  ddt version
+
+
+=head1 DESCRIPTION
+
+DDT is an acronym for DHCP-DNS-Tools.
+The previous command name was not C<ddt> but just C<dhcp-dns-tools>...
+In practise, DDT is an IP Address Management (IPAM) service.
+It has been used in the LEGI laboratory for over 10 years.
+
+The tool is quite effective and tries to keep things simple
+but easily configurable for your site like a swiss army knife.
+Everything is saved in a YAML database
+and entries could be added, deleted, or modified by the command line.
+
 
 =head1 COMMANDS
 
