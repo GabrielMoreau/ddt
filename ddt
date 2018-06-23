@@ -1402,6 +1402,7 @@ sub cmd_disable_float {
       'mac|m=s'   => \$mac,
       );
 
+   ($pool) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
       if $pool eq ''
       or $mac  eq '';
@@ -1422,6 +1423,7 @@ sub cmd_enable_float {
       'mac|m=s'   => \$mac,
       );
 
+   ($pool) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
       if $pool eq ''
       or $mac  eq '';
@@ -1577,6 +1579,7 @@ sub cmd_del_float {
       'mac|m=s'         => \$mac,
       );
 
+   ($pool) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
       if $pool eq ''
       or $mac  eq '';
