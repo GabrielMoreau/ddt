@@ -10,9 +10,10 @@ export LANG=C
 tmp_folder=$(mktemp --directory /tmp/ddt-XXXXXX)
 [ -n "${tmp_folder}" -a -d "${tmp_folder}" ] || exit 1
 
-# Set Version
-DDT_VERSION=$(grep 'version->declare' ddt | cut -f 2 -d "'") #'
-LOCAL_VERSION=5
+# Set Name and Version
+PKG_NAME=ddt
+CODE_VERSION=$(grep 'version->declare' ddt | cut -f 2 -d "'") #'
+PKG_VERSION=6
 
 # Create future tree
 mkdir -p ${tmp_folder}/usr/bin
@@ -26,15 +27,18 @@ cp config.sample.yml    ${tmp_folder}/usr/share/ddt/
 cp ddt.bash_completion  ${tmp_folder}/etc/bash_completion.d/
 (cd ${tmp_folder}/usr/bin;            ln -s ddt      dhcp-dns-tools)
 (cd ${tmp_folder}/usr/share/man/man1; ln -s ddt.1.gz dhcp-dns-tools.1.gz)
+chmod -R a+rx        ${tmp_folder}/usr/bin/ddt
+chmod -R a+rX,go-w   ${tmp_folder}/usr
+chmod -R a+rX,go-w   ${tmp_folder}/etc
 
 # Data archive
 rm -f ${tmp_folder}/data.tar.gz
-(cd ${tmp_folder}; tar czf data.tar.gz ./usr ./etc)
+(cd ${tmp_folder}; tar --owner root --group root -czf data.tar.gz ./usr ./etc)
 
 # Control file
 cat <<END > ${tmp_folder}/control
-Package: ddt
-Version: ${DDT_VERSION}-${LOCAL_VERSION}
+Package: ${PKG_NAME}
+Version: ${CODE_VERSION}-${PKG_VERSION}
 Section: utils
 Tag: implemented-in::perl, interface::commandline, role::program
 Priority: optional
@@ -60,20 +64,20 @@ END
 
 # Control archive
 rm -f ${tmp_folder}/control.tar.gz
-(cd ${tmp_folder}; tar czf control.tar.gz control)
+(cd ${tmp_folder}; tar --owner root --group root -czf control.tar.gz control)
 
 # Format deb package
 echo 2.0 > ${tmp_folder}/debian-binary
 
 # Create package (control before data)
-ar -r ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb ${tmp_folder}/debian-binary ${tmp_folder}/control.tar.gz ${tmp_folder}/data.tar.gz
+ar -r ${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb ${tmp_folder}/debian-binary ${tmp_folder}/control.tar.gz ${tmp_folder}/data.tar.gz
       
 # Clean
 rm -rf ${tmp_folder}
 
 # Prepare reprepro upload
 echo "# Prepare reprepro upload"
-echo "( cd /srv/www/debian/ ; reprepro includedeb wheezy   ~/wheezy/ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb )"
-echo "( cd /srv/www/debian/ ; reprepro includedeb jessie   ~/jessie/ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb )"
-echo "( cd /srv/www/debian/ ; reprepro includedeb stretch ~/stretch/ddt_${DDT_VERSION}-${LOCAL_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb wheezy   ~/wheezy/${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb jessie   ~/jessie/${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb stretch ~/stretch/${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb )"
 echo "( cd /srv/www/debian/ ; reprepro dumpreferences ) | grep -i ddt"
