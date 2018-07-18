@@ -922,27 +922,25 @@ sub cmd_change_comment {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   control_exist_domainset($computer_db, $domainset)   or exit;
+   control_exist_domainset($computer_db, $domainset)  or exit;
    control_syntax_mac_address($mac)                   or exit;
    control_syntax_comment($comment)                   or exit;
 
    my @domainsetdb = @{$computer_db->{$domainset}};
-   my $cpt = 0;
-   for my $value (@domainsetdb) {
-      for my $id (keys %{$value}) {
-         if ($id eq $mac) {
-            my $host = $computer_db->{$domainset}[$cpt]{$mac};
-            $host->{'comment'}     = $comment;
-            $host->{'modify_time'} = time;
 
-            ipamdb_save("$COMPUTER_YAML", $computer_db);
-            exit;
-            }
-         }
-      $cpt++;
+   LOOP_ON_COMPUTER:
+   for my $computer (@domainsetdb) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+      $attribute->{'modify_time'} = time;
+      $attribute->{'comment'}     = $comment;
+      ipamdb_save("$COMPUTER_YAML", $computer_db);
+      exit;
       }
-   print "Mise à jour du commentaire de la machine [FAILED]\n";
-   print "L'adresse MAC: $mac n'existe pas dans le domaine: $domainset.\n";
+   die "Error : Host $attribute->{'hostname'} comment [FAILED]\n" .
+      " ... No MAC: $mac belongs to the domaine set $domainset.\n";
    }
 
 #--------------------------------------------------------------------------------
@@ -982,25 +980,23 @@ sub cmd_change_domainset {
 
       my @domainsetdb = @{$computer_db->{$domainset_current}};
       my $computer_index = 0;
-      for my $value (@domainsetdb) {
-         for my $id (keys %{$value}) {
-            if ($id eq $mac) {
-               my $host = $computer_db->{$domainset_current}[$computer_index]{$mac};
-               next LOOP_ON_DOMAINSET if $host->{'ip'} ne $ip;
+      LOOP_ON_COMPUTER:
+      for my $computer (@domainsetdb) {
+         my ($mac_address, $attribute) = %{$computer};
 
-               $host->{'modify_time'} = time;
-               splice(@{$computer_db->{$domainset_current}}, $computer_index => 1);
-               push @{$computer_db->{$domainset}}, { $mac => $host };
+         $computer_index++ and next LOOP_ON_COMPUTER if $mac_address ne $mac;
+         next LOOP_ON_DOMAINSET if $attribute->{'ip'} ne $ip;
 
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               exit;
-               }
-            }
-         $computer_index++;
+         $attribute->{'modify_time'} = time;
+         splice(@{$computer_db->{$domainset_current}}, $computer_index => 1);
+         push @{$computer_db->{$domainset}}, { $mac => attribute };
+
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         exit;
          }
       }
-   print "Update of domain set $domainset [FAILED]\n";
-   print "L'adresse MAC: $mac ou l'adresse IP: $ip n'existe pas dans la base\n";
+   die "Error: Update of domain set $domainset [FAILED]\n" .
+      " ... MAC $mac and IP $ip don't exists in the database\n";
    }
 
 #--------------------------------------------------------------------------------
