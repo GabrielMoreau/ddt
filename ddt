@@ -728,7 +728,7 @@ sub change_mac {
          $attribute->{'modify_time'} = time;
          $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+         print "Info: Update host $hostname MAC: $mac IP: $ip [OK]\n";
          exit;
          }
       }
@@ -747,7 +747,7 @@ sub change_mac {
          $attribute->{'modify_time'} = time;
          $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+         print "Info: Update host $hostname MAC: $mac IP: $ip [OK]\n";
          exit;
          }
       }
@@ -786,7 +786,7 @@ sub change_ip {
       $attribute->{'modify_time'} = time;
       $attribute->{'ip'}          = $ip;
       ipamdb_save("$COMPUTER_YAML", $computer_db);
-      print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+      print "Info: Update host $hostname MAC: $mac_address IP: $ip [OK]\n";
       exit;
       }
    }
@@ -818,7 +818,7 @@ sub change_host {
       $attribute->{'modify_time'} = time;
       $attribute->{'hostname'}    = $hostname;
       ipamdb_save("$COMPUTER_YAML", $computer_db);
-      print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+      print "Info: Update host $hostname MAC: $mac_address IP: $ip [OK]\n";
       exit;
       }
 
