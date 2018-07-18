@@ -776,7 +776,7 @@ sub change_ip {
    for my $computer (@domainsetdb) {
       my ($mac_address, $attribute) = %{$computer};
       
-      next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname);
+      next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
  
       if ($attribute->{'address_type'} eq 'pool-dhcp') {
          die "Error: Host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
