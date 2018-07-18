@@ -2260,14 +2260,14 @@ sub cmd_show_host {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    LOOP_ON_DOMAIN:
-   for my $domainset_current (keys %{$computer_db}) {
+   for my $domainset_current (sort keys %{$computer_db}) {
       next if $domainset_current eq 'dset';
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
       next if $domainset_current eq 'tag';
       next if $domainset_current eq 'version';
 
-      print "\n# *** List of computers in the domain set: $domainset_current ***\n";
+      print "\n# *** List of computers without IP in the domain set: $domainset_current ***\n";
       printf "%-30s  %-20s %17s %5s %7s %-10s %s\n",
          'Hostname',
          'IPv4-Address',
@@ -2282,7 +2282,7 @@ sub cmd_show_host {
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
 
-         if ($attribute->{'ip'} =~ $DDT::RE::IPv4_ADDRESS) {
+         if ($attribute->{'ip'} =~ m/$DDT::RE::IPv4_ADDRESS/xms) {
             if ( not exists $ipdb{ $attribute->{'ip'} } ) {
                $ipdb{ $attribute->{'ip'} } = {
                   'mac_address'  => $mac_address,
