@@ -989,7 +989,7 @@ sub cmd_change_domainset {
 
          $attribute->{'modify_time'} = time;
          splice(@{$computer_db->{$domainset_current}}, $computer_index => 1);
-         push @{$computer_db->{$domainset}}, { $mac => attribute };
+         push @{$computer_db->{$domainset}}, { $mac => $attribute };
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
          exit;
