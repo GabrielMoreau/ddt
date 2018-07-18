@@ -2260,7 +2260,21 @@ sub cmd_show_host {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   LOOP_ON_DOMAIN:
+   my $tb_computer = Text::Table->new(
+     {align  => 'left',   align_title => 'left',   title => 'Hostname.DomainSet'},
+     {is_sep => 1,        body        => '  '},
+     {align  => 'left',   align_title => 'left',   title => 'IPv4-Address'},
+     {is_sep => 1,        body        => '  '},
+     {align  => 'center', align_title => 'center', title => 'MAC-Address'},
+     {is_sep => 1,        body        => '  '},
+     {align  => 'right',  align_title => 'right',  title => 'Type'},
+     {align  => 'right',  align_title => 'right',  title => 'Status'},
+     {is_sep => 1,        body        => '  '},
+     {align  => 'left',   align_title => 'left',   title => 'Date'},
+     {align  => 'left',   align_title => 'left',   title => 'Comment'},
+     );
+
+  LOOP_ON_DOMAIN:
    for my $domainset_current (sort keys %{$computer_db}) {
       next if $domainset_current eq 'dset';
       next if $domainset_current eq 'pool';
@@ -2268,28 +2282,6 @@ sub cmd_show_host {
       next if $domainset_current eq 'tag';
       next if $domainset_current eq 'version';
 
-      my $tb_computer = Text::Table->new(
-         {align  => 'left',   align_title => 'left',   title => 'Hostname.DomainSet'},
-         {is_sep => 1,        body        => '  '},
-         {align  => 'left',   align_title => 'left',   title => 'IPv4-Address'},
-         {is_sep => 1,        body        => '  '},
-         {align  => 'center', align_title => 'center', title => 'MAC-Address'},
-         {is_sep => 1,        body        => '  '},
-         {align  => 'right',  align_title => 'right',  title => 'Type'},
-         {align  => 'right',  align_title => 'right',  title => 'Status'},
-         {is_sep => 1,        body        => '  '},
-         {align  => 'left',   align_title => 'left',   title => 'Date'},
-         {align  => 'left',   align_title => 'left',   title => 'Comment'},
-         );
-
-      #printf "%-30s  %-20s %17s %5s %7s %-10s %s\n",
-      #   'Hostname',
-      #   'IPv4-Address',
-      #   'MAC-Address',
-      #   'Type',
-      #   'Status',
-      #   'Date',
-      #   'Comment';
       my @domainsetdb = @{$computer_db->{$domainset_current}};
 
       LOOP_ON_COMPUTER:
@@ -2304,11 +2296,11 @@ sub cmd_show_host {
                   %{$attribute},
                   'domainset'    => $domainset_current,
                   };
-               next LOOP_ON_COMPUTER;
                }
             else {
-               print {*STDERR} "# Warning: $ip already exists in the database !\n";
+               print {*STDERR} "# Warning: $ip already exists in the database with MAC $mac_address!\n";
                }
+            next LOOP_ON_COMPUTER;
             }
 
          my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
@@ -2338,16 +2330,10 @@ sub cmd_show_host {
             $comment,
             );
          }
-
-      if ($tb_computer->body_height) {
-         print "\n# *** List of pool computers in the domain set: $domainset_current ***\n";
-         print $tb_computer->title();
-         print $tb_computer->rule('-');
-         print $tb_computer->body();
-         }
+      #print "\n# *** List of pool computers in the domain set: $domainset_current ***\n";
       }
 
-   print "\n# *** List of computers ordered by IP and domain set ***\n";
+   #print "\n# *** List of computers ordered by IP and domain set ***\n";
    LOOP_ON_IP_ADDRESS:
    foreach my $ip (Net::Netmask::sort_by_ip_address(keys %ipdb)) {
       my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $ipdb{$ip}->{'modify_time'};
@@ -2366,15 +2352,21 @@ sub cmd_show_host {
          $enable .= ':' . $ipdb{$ip}->{'tag'};
          }
 
-      printf "%-30s %-20s %17s %9s %3s %10s %s\n",
+      #printf "%-30s %-20s %17s %9s %3s %10s %s\n",
+      $tb_computer->add(
          $ipdb{$ip}->{'hostname'} . '.' . $ipdb{$ip}->{'domainset'},
          $ip,
          normalize_mac_address($ipdb{$ip}->{'mac_address'}),
          $ipdb{$ip}->{'address_type'},
          $enable,
          $date,
-         $comment;
+         $comment
+         );
       }
+
+   print $tb_computer->title();
+   print $tb_computer->rule('-');
+   print $tb_computer->body();
    }
 
 #-------------------------------------------------------------------------------
