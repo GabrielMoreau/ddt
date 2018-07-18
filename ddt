@@ -2339,7 +2339,7 @@ sub cmd_show_host {
             );
          }
 
-      if ($tb->body_height) {
+      if ($tb_computer->body_height) {
          print "\n# *** List of pool computers in the domain set: $domainset_current ***\n";
          print $tb_computer->title();
          print $tb_computer->rule('-');
