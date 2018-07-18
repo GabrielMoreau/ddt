@@ -1193,27 +1193,24 @@ sub disable_float {
 
       my @domainsetdb = @{$computer_db->{$domainset_current}};
 
-      #$cpt_mac=0;
+      LOOP_ON_COMPUTER:
       for my $computer (@domainsetdb) {
-         for my $mac_current (keys %{$computer}) {
-            if ($mac_current eq $mac) {
-               if ($computer->{$mac}{'ip'} eq $pool) {
-                  #splice(@{$computer_db->($domainset_current)} , $cpt_mac => 1);
-                  my $timestamp = time;
-                  $computer->{$mac}{'modify_time'} = $timestamp;
-                  $computer->{$mac}{'enabled'}     = 'no';
-                  ipamdb_save("$COMPUTER_YAML", $computer_db);
-                  print "Disabling machine $mac from pool $pool [OK]\n";
-                  print "+-> Status:" . $computer->{$mac}{'enabled'} . "\n";
-                  exit;
-                  }
-               else {
-                  print "Computer disable $mac [FAILED]\n";
-                  print "+-> The computer $mac does not belong to the $pool pool.\n";
-                  exit;
-                  }
-               }
-            #$cpt_mac++;
+         my ($mac_address, $attribute) = %{$computer};
+         next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+         if ($attribute->{'ip'} eq $pool) {
+            my $timestamp = time;
+            $attribute->{'modify_time'} = $timestamp;
+            $attribute->{'enabled'}     = 'no';
+            ipamdb_save("$COMPUTER_YAML", $computer_db);
+            print "Disabling machine $mac from pool $pool [OK]\n";
+            print "+-> Status:" . $attribute->{'enabled'} . "\n";
+            exit;
+            }
+         else {
+            print "Computer disable $mac [FAILED]\n";
+            print "+-> The computer $mac does not belong to the $pool pool.\n";
+            exit;
             }
          }
       }
