@@ -1157,26 +1157,24 @@ sub disable_pc {
 
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
-         if ($attribute->{'address_type'} ne 'pool-dhcp') {
+         if ($attribute->{'address_type'} eq 'pool-dhcp') {
+            die "Error: Host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
+               " ... use 'disable-float' command instead";
+            }
 
-            if ($attribute->{'enabled'} eq 'no') {
-               print "Info: Host $hostname from domain set $domainset is already disable [OK]" .
-                  " ... Status: $attribute->{'enabled'}\n";
-               exit;
-               }
-
-            my $timestamp = time;
-            $attribute->{'modify_time'} = $timestamp;
-            $attribute->{'enabled'}     = 'no';
-            ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Info: Disabling host $hostname from domain set $domainset [OK]" .
+         if ($attribute->{'enabled'} eq 'no') {
+            print "Info: Host $hostname from domain set $domainset is already disable [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
 
-         if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error: Host $hostname from domain set $domainset inside a pool [FAILED]" .
-            }
+         my $timestamp = time;
+         $attribute->{'modify_time'} = $timestamp;
+         $attribute->{'enabled'}     = 'no';
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Disabling host $hostname from domain set $domainset [OK]" .
+            " ... Status: $attribute->{'enabled'}\n";
+         exit;
          }
       }
    }
