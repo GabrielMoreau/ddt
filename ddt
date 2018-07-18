@@ -1109,11 +1109,10 @@ sub disable_pc {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   if ($ip ne '') {
+   if ($ip ne '') { # disable by IP
       control_syntax_ip($ip);
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         print "Error: Unkown IP address: $ip\n";
-         exit;
+         die "Error: Unkown IP address: $ip [FAILED]\n";
          }
 
       for my $domainset_current (keys %{$computer_db}) {
@@ -1124,51 +1123,62 @@ sub disable_pc {
          next if $domainset_current eq 'version';
 
          my @domainsetdb = @{$computer_db->{$domainset_current}};
-         my $cpt_mac = 0;
-         for my $value (@domainsetdb) {
-            for my $id (keys %{$value}) {
+         LOOP_ON_COMPUTER:
+         for my $computer (@domainsetdb) {
+            my ($mac_address, $attribute) = %{$computer};
 
-               if ($value->{$id}->{'ip'} eq $ip) {
-                  my $timestamp = time;
-                  $computer_db->{$domainset_current}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
-                  $computer_db->{$domainset_current}[$cpt_mac]->{$id}->{'enabled'} = 'no';
-                  print "L'adresse IP: $ip a été désactivée. Valeur du champs enabled: [".$computer_db->{$domainset_current}[$cpt_mac]->{$id}->{'enabled'}."]\n";
-                  ipamdb_save("$COMPUTER_YAML", $computer_db);
-                  exit;
-                  }
-               $cpt_mac++;
+            next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+
+            if ($attribute->{'enabled'} eq 'no') {
+               print "Info: IP $ip from domain set $domainset_current is already disable [OK]" .
+                  " ... Status: $attribute->{'enabled'}\n";
+               exit;
                }
+
+            my $timestamp = time;
+            $attribute->{'modify_time'} = $timestamp;
+            $attribute->{'enabled'}     = 'no';
+            ipamdb_save("$COMPUTER_YAML", $computer_db);
+            print "Info: Disabling IP $ip from domain set $domainset_current [OK]" .
+               " ... Status: $attribute->{'enabled'}\n";
+            exit;
             }
          }
       }
-   else {
+   else { # disable by Hostname
       control_exist_domainset($computer_db, $domainset);
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         die "Error: Unkown host: $hostname, in domain set: $domainset [FAILED]\n";
          }
 
-      my $cpt_mac = 0;
-      for my $value (@{$computer_db->{$domainset}}) {
-         for my $id (keys %{$value}) {
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
-               my $timestamp = time;
-               $computer_db->{$domainset}[$cpt_mac]->{$id}->{'modify_time'} = $timestamp;
-               $computer_db->{$domainset}[$cpt_mac]->{$id}->{'enabled'} = 'no';
-               print "La machine $hostname (domaine: $domainset) a été désactivé du DHCP. Valeur du champs enabled: [".$computer_db->{$domainset}[$cpt_mac]->{$id}->{'enabled'}."]\n";
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
+      LOOP_ON_COMPUTER:
+      for my  $computer (@{$computer_db->{$domainset}}) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+
+         if ($attribute->{'address_type'} ne 'pool-dhcp') {
+
+            if ($attribute->{'enabled'} eq 'no') {
+               print "Info: Host $hostname from domain set $domainset is already disable [OK]" .
+                  " ... Status: $attribute->{'enabled'}\n";
                exit;
                }
 
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
-               print "Désactivation de la machine $hostname sur le domaine $domainset [FAILED]\n";
-               print "La machine $hostname fait partie du pool $hostname.\n";
-               exit;
-               }
+            my $timestamp = time;
+            $attribute->{'modify_time'} = $timestamp;
+            $attribute->{'enabled'}     = 'no';
+            ipamdb_save("$COMPUTER_YAML", $computer_db);
+            print "Info: Disabling host $hostname from domain set $domainset [OK]" .
+               " ... Status: $attribute->{'enabled'}\n";
+            exit;
             }
-         $cpt_mac++;
+
+         if ($attribute->{'address_type'} eq 'pool-dhcp') {
+            die "Error: Host $hostname from domain set $domainset inside a pool [FAILED]" .
+            }
          }
       }
-   #print "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
    }
 
 #-------------------------------------------------------------------------------
@@ -1180,8 +1190,7 @@ sub disable_float {
 
    my $cpt_mac;
    if ( control_exist_mac($computer_db, $mac) == 1 ) {
-      print "Error: Unkown physical MAC address: $mac\n";
-      exit;
+      die "Error: Unkown physical MAC address: $mac [FAILED]\n";
       }
 
    for my $domainset_current (keys %{$computer_db}) {
@@ -1199,18 +1208,22 @@ sub disable_float {
          next LOOP_ON_COMPUTER if $mac_address ne $mac;
 
          if ($attribute->{'ip'} eq $pool) {
+            if ($attribute->{'enabled'} eq 'no') {
+               print "Info: Host $mac from pool $pool is already disable [OK]" .
+                  " ... Status: $attribute->{'enabled'}\n";
+               exit;
+               }
             my $timestamp = time;
             $attribute->{'modify_time'} = $timestamp;
             $attribute->{'enabled'}     = 'no';
             ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Disabling machine $mac from pool $pool [OK]\n";
-            print "+-> Status:" . $attribute->{'enabled'} . "\n";
+            print "Info: Disabling host $mac from pool $pool [OK]" .
+               " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
          else {
-            print "Computer disable $mac [FAILED]\n";
-            print "+-> The computer $mac does not belong to the $pool pool.\n";
-            exit;
+            die "Error: Host disable $mac [FAILED]" .
+               " ... The host $mac does not belong to the $pool pool.\n";
             }
          }
       }
