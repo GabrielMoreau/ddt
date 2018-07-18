@@ -718,47 +718,37 @@ sub change_mac {
          exit;
          }
       my @domainsetdb = @{$computer_db->{$domainset}};
-      my $cpt = 0;
-      for my $value (@domainsetdb) {
-         for my $id (keys %{$value}) {
-            if ($value->{$id}->{'ip'} eq $ip) {
-               my $host = $value->{$id};
-               $host->{'modify_time'} = time;
-               $computer_db->{$domainset}->[$cpt] = { $mac => $host };
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               print "Update [OK]\n";
-               print "Hostname: $host->{'hostname'}\n";
-               print "MAC: $mac\n";
-               print "IP: $host->{'ip'}\n";
-               exit;
-               }
-            $cpt++;
-            }
+      my $computer_index = 0;
+      LOOP_ON_COMPUTER:
+      for my $computer (@domainsetdb) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+
+         $attribute->{'modify_time'} = time;
+         $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+         exit;
          }
-         #print "Mise à jour de l'adresse MAC [FAILED]\n";
-         #print "l'adresse IP n'existe pas sur le domaine $domainset\n";
       }
    elsif ($hostname ne '') {
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
          die "Error: Unkown host: $hostname, in domain set: $domainset\n";
          }
       my @domainsetdb = @{$computer_db->{$domainset}};
-      my $cpt = 0;
-      for my $value (@domainsetdb) {
-         for my $id (keys %{$value}) {
-            if ($value->{$id}->{'hostname'} eq $hostname) {
-               my $host = $value->{$id};
-               $host->{'modify_time'} = time;
-               $computer_db->{$domainset}->[$cpt] = { $mac => $host };
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               print "Update [OK]\n";
-               print "Hostname: $host->{'hostname'}\n";
-               print "MAC: $mac\n";
-               print "IP: $host->{'ip'}\n";
-               exit;
-               }
-            }
-         $cpt++;
+      my $computer_index = 0;
+      LOOP_ON_COMPUTER:
+      for my $computer (@domainsetdb) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+
+         $attribute->{'modify_time'} = time;
+         $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+         exit;
          }
       }
    }
@@ -779,35 +769,25 @@ sub change_ip {
       }
    control_syntax_ip($ip) or exit;
    control_exist_ip($computer_db, $ip) or die "Error: IP address already exist in domain set attachement $domainset: $ip\n";
+
    my @domainsetdb = @{$computer_db->{$domainset}};
-   my $cpt = 0;
-   for my $value (@domainsetdb) {
-      for my $id (keys %{$value}) {
-         if (($value->{$id}->{'hostname'} eq $hostname)
-               and (
-                  ($value->{$id}->{'address_type'} eq 'dhcp')
-                  or ($value->{$id}->{'address_type'} eq 'static')
-                  )
-               ) {
-            $computer_db->{$domainset}[$cpt]{$id}{'ip'} = $ip;
-            $computer_db->{$domainset}[$cpt]{$id}{'modify_time'} = time;
-            ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Update [OK]\n";
-            print "Hostname: $hostname\n";
-            print "MAC: $id\n";
-            print "IP: $ip\n";
-            exit;
-            }
-         else {
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
-               print "Modification de l'adresse IP [FAILED]\n";
-               print "La machine $hostname sur le domain set $domainset fait partie du pool DHCP ".$value->{$id}->{'ip'}."\n";
-               print "Veuillez la supprimer du pool et la recréer avec l'adresse IP que vous souhaitez.\n";
-               exit;
-               }
-            }
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@domainsetdb) {
+      my ($mac_address, $attribute) = %{$computer};
+      
+      next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname);
+ 
+      if ($attribute->{'address_type'} eq 'pool-dhcp') {
+         die "Error: Host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
+            " ... use 'del-float' command before";
          }
-      $cpt++;
+
+      $attribute->{'modify_time'} = time;
+      $attribute->{'ip'}          = $ip;
+      ipamdb_save("$COMPUTER_YAML", $computer_db);
+      print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+      exit;
       }
    }
 
@@ -823,30 +803,27 @@ sub change_host {
    control_exist_domainset($computer_db, $domainset) or exit;
    control_syntax_ip($ip)   or exit;
    if ( control_exist_ip($computer_db, $ip) == 1 ) {
-      print "Error: Unkown IP address: $ip\n";
-      exit;
+      die "Error: Unkown IP address: $ip\n";
       }
    control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
 
    my @domainsetdb = @{$computer_db->{$domainset}};
-   my $cpt = 0;
-   for my $value (@domainsetdb) {
-      for my $id (keys %{$value}) {
-         if ($value->{$id}->{'ip'} eq $ip) {
-            $computer_db->{$domainset}[$cpt]{$id}{'hostname'} = $hostname;
-            $computer_db->{$domainset}[$cpt]{$id}{'modify_time'} = time;
-            ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Update [OK]\n";
-            print "Hostname: $hostname\n";
-            print "MAC: $id\n";
-            print "IP: $ip\n";
-            exit;
-            }
-         }
-      $cpt++;
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@domainsetdb) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+
+      $attribute->{'modify_time'} = time;
+      $attribute->{'hostname'}    = $hostname;
+      ipamdb_save("$COMPUTER_YAML", $computer_db);
+      print "Info: Update host $host->{'hostname'} MAC: $mac IP: $host->{'ip'} [OK]\n";
+      exit;
       }
-   print "Error: Failed to update computer hostname\n";
-   print "L'adresse IP: $ip n'existe pas dans le domaine: $domainset.\n";
+
+   die "Error: Failed to update hostname $hostname [FAILED]\n" .
+      " ... no IP $ip belongs to the domain set $domainset\n";
    }
 
 #--------------------------------------------------------------------------------
