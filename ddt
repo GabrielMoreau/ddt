@@ -2267,7 +2267,7 @@ sub cmd_show_host {
       next if $domainset_current eq 'tag';
       next if $domainset_current eq 'version';
 
-      print "\n# *** List of computers without IP in the domain set: $domainset_current ***\n";
+      print "\n# *** List of pool computers in the domain set: $domainset_current ***\n";
       printf "%-30s  %-20s %17s %5s %7s %-10s %s\n",
          'Hostname',
          'IPv4-Address',
@@ -2281,18 +2281,19 @@ sub cmd_show_host {
       LOOP_ON_COMPUTER:
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
+         my $ip = $attribute->{'ip'};
 
-         if ($attribute->{'ip'} =~ m/$DDT::RE::IPv4_ADDRESS/xms) {
-            if ( not exists $ipdb{ $attribute->{'ip'} } ) {
-               $ipdb{ $attribute->{'ip'} } = {
+         if ($ip =~ m/$DDT::RE::IPv4_ADDRESS/xms) {
+            if ( not exists $ipdb{$ip} ) {
+               $ipdb{$ip} = {
                   'mac_address'  => $mac_address,
                   %{$attribute},
-                  'domain'       => $domainset_current,
+                  'domainset'    => $domainset_current,
                   };
                next LOOP_ON_COMPUTER;
                }
             else {
-               print {*STDERR} "# Warning: $attribute->{'ip'} already exists in the database !\n";
+               print {*STDERR} "# Warning: $ip already exists in the database !\n";
                }
             }
 
@@ -2304,14 +2305,12 @@ sub cmd_show_host {
          my $comment = normalize_comment($attribute->{'comment'});
          $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
 
-         my $ip = $attribute->{'ip'};
-
          my $enable = $attribute->{'enabled'};
          if (exists $attribute->{'pxe_config'}) {
             $enable .= '/' . $attribute->{'pxe_config'};
             }
-         if (exists $ipdb{$ip}->{'tag'}) {
-            $enable .= ':' . $ipdb{$ip}->{'tag'};
+         if (exists $attribute->{'tag'}) {
+            $enable .= ':' . $attribute->{'tag'};
             }
 
          printf "%-30s  %-20s %17s %9s %3s %10s %s\n",
@@ -2345,7 +2344,7 @@ sub cmd_show_host {
          }
 
       printf "%-30s %-20s %17s %9s %3s %10s %s\n",
-         $ipdb{$ip}->{'hostname'} . '.' . $ipdb{$ip}->{'domain'},
+         $ipdb{$ip}->{'hostname'} . '.' . $ipdb{$ip}->{'domainset'},
          $ip,
          normalize_mac_address($ipdb{$ip}->{'mac_address'}),
          $ipdb{$ip}->{'address_type'},
