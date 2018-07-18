@@ -2269,16 +2269,18 @@ sub cmd_show_host {
       next if $domainset_current eq 'version';
 
       my $tb_computer = Text::Table->new(
-         {align => 'left',   align_title => 'left',   title => 'Hostname.DomainSet'},
-         {align => 'left',   align_title => 'left',   title => 'IPv4-Address'},
-         {align => 'center', align_title => 'center', title => 'MAC-Address'},
-         {align => 'right',  align_title => 'right',  title => 'Type'},
-         {align => 'right',  align_title => 'right',  title => 'Status'},
-         {align => 'left',   align_title => 'left',   title => 'Date'},
-         {align => 'left',   align_title => 'left',   title => 'Comment'},
+         {align  => 'left',   align_title => 'left',   title => 'Hostname.DomainSet'},
+         {is_sep => 1,        body        => '  '},
+         {align  => 'left',   align_title => 'left',   title => 'IPv4-Address'},
+         {is_sep => 1,        body        => '  '},
+         {align  => 'center', align_title => 'center', title => 'MAC-Address'},
+         {is_sep => 1,        body        => '  '},
+         {align  => 'right',  align_title => 'right',  title => 'Type'},
+         {align  => 'right',  align_title => 'right',  title => 'Status'},
+         {is_sep => 1,        body        => '  '},
+         {align  => 'left',   align_title => 'left',   title => 'Date'},
+         {align  => 'left',   align_title => 'left',   title => 'Comment'},
          );
-
-      $tb_computer->add(
 
       #printf "%-30s  %-20s %17s %5s %7s %-10s %s\n",
       #   'Hostname',
@@ -2337,10 +2339,12 @@ sub cmd_show_host {
             );
          }
 
-      print "\n# *** List of pool computers in the domain set: $domainset_current ***\n";
-      print $tb_computer->title();
-      print $tb_computer->rule('-');
-      print $tb_computer->body();
+      if ($tb->body_height) {
+         print "\n# *** List of pool computers in the domain set: $domainset_current ***\n";
+         print $tb_computer->title();
+         print $tb_computer->rule('-');
+         print $tb_computer->body();
+         }
       }
 
    print "\n# *** List of computers ordered by IP and domain set ***\n";
