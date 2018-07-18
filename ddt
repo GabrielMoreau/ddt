@@ -939,7 +939,7 @@ sub cmd_change_comment {
       ipamdb_save("$COMPUTER_YAML", $computer_db);
       exit;
       }
-   die "Error : Host $attribute->{'hostname'} comment [FAILED]\n" .
+   die "Error : Host $mac comment [FAILED]\n" .
       " ... No MAC: $mac belongs to the domaine set $domainset.\n";
    }
 
