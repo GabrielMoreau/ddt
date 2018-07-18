@@ -191,13 +191,9 @@ sub control_exist_hostname {
 
    my @domainsetdb = @{$computer_db->{$domainset}};
 
-   for my $value (@domainsetdb) {
-      for my $id (keys %{$value}) {
-         if ($value->{$id}->{'hostname'} eq $hostname) {
-            #print "Error: Hostname already exist: $hostname\n";
-            return 0;
-            }
-         }
+   for my $computer (@domainsetdb) {
+      my ($mac_address, $attribute) = %{$computer};
+      return 0 if $attribute->{'hostname'} eq $hostname;
       }
    return 1;
    }
@@ -218,13 +214,11 @@ sub control_exist_mac {
       next if $domainset_current eq 'version';
 
       my @domainsetdb = @{$computer_db->{$domainset_current}};
-      for my $value (@domainsetdb) {
-         for my $id (keys %{$value}) {
-            if ($id eq $mac) {
-               #print "Error: Physical MAC address already exists: $mac\n";
-               return 0;
-               }
-            }
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@domainsetdb) {
+         my ($mac_address, $attribute) = %{$computer};
+         return 0 if $mac_address eq $mac;
          }
       }
    return 1;
@@ -427,21 +421,19 @@ sub add_alias {
    control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
 
    my @domainsetdb = @{$computer_db->{$domainset}};
-   my $cpt=0;
-   for my $value (@domainsetdb) {
-      for my $id (keys %{$value}) {
 
-         if ($value->{$id}->{'hostname'} eq $hostname) {
-            print  $value->{$id}->{'alias'};
-            $alias = $alias . ' ' . $value->{$id}->{'alias'};
-            $computer_db->{$domainset}[$cpt]{$id}{'alias'}        = $alias;
-            $computer_db->{$domainset}[$cpt]{$id}{'modify_time'}  = time;
-            ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Update attribute alias [OK]\n";
-            exit;
-            }
-         }
-      $cpt=$cpt+1;
+   LOOP_ON_COMPUTER:
+   for my $computer (@domainsetdb) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+
+      $alias .= ' ' . $attribute->{'alias'};
+      $attribute->{'alias'}       = $alias;
+      $attribute->{'modify_time'} = time;
+      ipamdb_save("$COMPUTER_YAML", $computer_db);
+      print "Info: Update attribute alias to $alias for host $hostname [OK]\n";
+      exit;
       }
    }
 
@@ -471,7 +463,7 @@ sub add_static {
       'comment'      => $comment,
       'alias'        =>  '',
       }};
-   print "Add the computer: $hostname, IP: $ip, MAC: $mac, Domain Set: $domainset\n";
+   print "Info: Add the host: $hostname, IP: $ip, MAC: $mac, Domain Set: $domainset [OK]\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -534,7 +526,7 @@ sub add_float {
       'modify_time'  => $timestamp,
       'comment'      => $comment,
       }};
-   print "Add the computer in pool MAC: $mac, Domain Set: $domainset, Pool: $pool\n";
+   print "Info: Add the computer in pool MAC: $mac, Domain Set: $domainset, Pool: $pool [OK]\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -1315,10 +1307,8 @@ sub enable_float {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   my $computer_index;
    if ( control_exist_mac($computer_db, $mac) == 1 ) {
-      print "Adresse MAC $mac non trouvée.\n";
-      exit;
+      die "Error: Unkown physical MAC address: $mac [FAILED]\n";
       }
 
    for my $domainset_current (keys %{$computer_db}) {
@@ -1330,26 +1320,29 @@ sub enable_float {
 
       my @domainsetdb = @{$computer_db->{$domainset_current}};
 
-      $computer_index=0;
-      for my $value (@domainsetdb) {
-         for my $id (keys %{$value}) {
-            if ($id eq $mac) {
-               if ($value->{$id}->{'ip'} eq $pool) {
-                  my $timestamp = time;
-                  $computer_db->{$domainset_current}[$computer_index]->{$id}->{'modify_time'} = $timestamp;
-                  $computer_db->{$domainset_current}[$computer_index]->{$id}->{'enabled'} = 'yes';
-                  ipamdb_save("$COMPUTER_YAML", $computer_db);
-                  print "Réactivation de la machine $mac du pool $pool [OK]\n";
-                  exit;
-                  }
-               else {
-                  print "Réactivation de la machine $mac [FAILED]\n";
-                  print "La machine $mac n'appartient pas au pool $pool.\n";
-                  exit;
-                  }
-               }
-            $computer_index++;
+      LOOP_ON_COMPUTER:
+      for my $computer (@domainsetdb) {
+         my ($mac_address, $attribute) = %{$computer};
+         next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+         if ($attribute->{'ip'} ne $pool) {
+            die "Error: Host enable $mac [FAILED]" .
+               " ... The host $mac does not belong to the $pool pool.\n";
             }
+
+         if ($attribute->{'enabled'} eq 'yes') {
+            print "Info: Host $mac from pool $pool is already enable [OK]" .
+               " ... Status: $attribute->{'enabled'}\n";
+            exit;
+            }
+
+         my $timestamp = time;
+         $attribute->{'modify_time'} = $timestamp;
+         $attribute->{'enabled'}     = 'yes';
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Enabling host $mac from pool $pool [OK]" .
+            " ... Status: $attribute->{'enabled'}\n";
+         exit;
          }
       }
    }
