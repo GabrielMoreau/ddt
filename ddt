@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
+# Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 # License GNU GPL version 2 or later and Perl equivalent
 #
 # apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl libtext-table-perl
@@ -3073,10 +3073,12 @@ sub cmd_version {
 
    print <<'END';
 ddt - management of computer names and IP addresses
-Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
+Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+Main author Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
 License GNU GPL version 2 or later and Perl equivalent
 END
 
+   print "Database Version 1\n";
    print "Version $VERSION\n\n";
    print ' $Id$'."\n";
    return;
@@ -3389,11 +3391,11 @@ and entries could be added, deleted, or modified by the command line.
 
 =head1 AUTHORS
 
-Written by Gabriel Moreau, Kevin Reverchon, Olivier De-Marchi - Grenoble - France
+Written by Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>, Kevin Reverchon, Olivier De-Marchi - Grenoble - France
 
 
 =head1 LICENSE AND COPYRIGHT
 
-Licence GNU GPL version 2 or later and Perl equivalent
+License GNU GPL version 2 or later and Perl equivalent
 
-Copyright (C) 2006-2018 Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>.
+Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
