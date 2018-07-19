@@ -1460,18 +1460,17 @@ sub del_pc {
       for my $computer (@{$computer_db->{$domainset}}) {
          my ($mac_address, $attribute) = %{$computer};
 
-            $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
-            if ($attribute->{'address_type'} eq 'pool-dhcp') {
-               die "Error: Host remove $hostname from the domain set $domainset [FAILED]" .
-                  " ... The host $hostname belongs to a DHCP pool.\n";
-               }
-
-            splice(@{$computer_db->{$domainset}}, $computer_index => 1);
-            ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Info: Host $hostname has been removed from the domain set $domainset [OK]\n";
-            exit;
+         if ($attribute->{'address_type'} eq 'pool-dhcp') {
+            die "Error: Host remove $hostname from the domain set $domainset [FAILED]" .
+               " ... The host $hostname belongs to a DHCP pool.\n";
             }
+
+         splice(@{$computer_db->{$domainset}}, $computer_index => 1);
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Host $hostname has been removed from the domain set $domainset [OK]\n";
+         exit;
          }
       }
    }
