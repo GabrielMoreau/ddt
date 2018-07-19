@@ -1430,49 +1430,49 @@ sub del_pc {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    control_exist_domainset($computer_db, $domainset) or exit;
-   if ($ip ne '') {
+   if ($ip ne '') { # delete by IP
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          die "Error: Unkown IP address: $ip\n";
          }
-      my $computer_index=0;
-      for my $value (@{$computer_db->{$domainset}}) {
-         for my $id (keys %{$value}) {
-            if ($value->{$id}->{'ip'} eq $ip) {
-               my $timestamp = time;
-               splice(@{$computer_db->{$domainset}}, $computer_index => 1);
-               print "La machine $ip a été supprimer du domaine $domainset\n";
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               exit;
-               }
-            }
-         $computer_index++;
+
+      my $computer_index = 0;
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@{$computer_db->{$domainset}}) {
+         my ($mac_address, $attribute) = %{$computer};
+
+         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+         
+         splice(@{$computer_db->{$domainset}}, $computer_index => 1);
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Host $ip has been removed from the domain set $domainset [OK]\n";
+         exit;
          }
-      #print "La machine $ip n'existe pas sur le domaine $domainset.\n";
       }
    else {
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
          die "Error: Unkown host: $hostname, in domain set: $domainset\n";
          }
-      my $computer_index=0;
-      for my $value (@{$computer_db->{$domainset}}) {
-         for my $id (keys %{$value}) {
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
-               my $timestamp = time;
-               splice(@{$computer_db->{$domainset}}, $computer_index => 1);
-               print "La machine $hostname a été supprimer du domaine $domainset\n";
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               exit;
+
+      my $computer_index = 0;
+
+      LOOP_ON_COMPUTER:
+      for my $computer (@{$computer_db->{$domainset}}) {
+         my ($mac_address, $attribute) = %{$computer};
+
+            $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+
+            if ($attribute->{'address_type'} eq 'pool-dhcp') {
+               die "Error: Host remove $hostname from the domain set $domainset [FAILED]" .
+                  " ... The host $hostname belongs to a DHCP pool.\n";
                }
 
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
-               print "Suppression de la machine $hostname sur le domaine $domainset [FAILED]\n";
-               print "La machine $hostname fait partie du pool DHCP $hostname.\n";
-               exit;
-               }
+            splice(@{$computer_db->{$domainset}}, $computer_index => 1);
+            ipamdb_save("$COMPUTER_YAML", $computer_db);
+            print "Info: Host $hostname has been removed from the domain set $domainset [OK]\n";
+            exit;
             }
-         $computer_index++;
          }
-      #print "La machine $hostname n'existe pas sur le domaine $domainset.\n";
       }
    }
 
@@ -1886,23 +1886,20 @@ sub cmd_enable_pxe {
          die "Error: Unkown host: $hostname, in domain set: $domainset\n";
          }
 
-      my $computer_index = 0;
-      for my $value (@{$computer_db->{$domainset}}) {
-         for my $id (keys %{$value}) {
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
-               my $timestamp = time;
-               $computer_db->{$domainset}[$computer_index]->{$id}->{'modify_time'} = $timestamp;
-               $computer_db->{$domainset}[$computer_index]->{$id}->{'pxe_config'}  = $pxe_config;
-               print "Host $hostname ($domainset), PXE enabled in config: $pxe_config\n";
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               exit;
-               }
-
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
-               die "Error. Host $hostname ($domainset) in a pool. No PXE possible\n";
-               }
+      LOOP_ON_COMPUTER:
+      for my $computer (@{$computer_db->{$domainset}}) {
+         my ($mac_address, $attribute) = %{$computer};
+         next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+         
+         if ($attribute->{'address_type'} eq 'pool-dhcp') {
+            die "Error. Host $hostname ($domainset) in a pool. No PXE possible [FAILED]\n";
             }
-         $computer_index++;
+
+         $attribute->{'modify_time'} = time;
+         $attribute->{'pxe_config'}  = $pxe_config;
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Host $hostname ($domainset), PXE enabled in config: $pxe_config [OK]\n";
+         exit;
          }
       }
    }
@@ -1947,22 +1944,19 @@ sub cmd_disable_pxe {
          next if $domainset_current eq 'tag';
          next if $domainset_current eq 'version';
 
-         my $computer_index = 0;
+         LOOP_ON_COMPUTER:
          for my $computer (@{$computer_db->{$domainset_current}}) {
-            for my $id (keys %{$computer}) {
-               if ($computer->{$id}->{'ip'} eq $ip) {
-                  next if not exists $computer_db->{$domainset_current}[$computer_index]->{$id}->{'pxe_config'};
+            my ($mac_address, $attribute) = %{$computer};
+            
+            next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+            next LOOP_ON_COMPUTER if not exists $attribute->{'pxe_config'};
 
-                  my $pxe_config = $computer_db->{$domainset_current}[$computer_index]->{$id}->{'pxe_config'};
-                  my $timestamp  = time;
-                  $computer_db->{$domainset_current}[$computer_index]->{$id}->{'modify_time'} = $timestamp;
-                  delete $computer_db->{$domainset_current}[$computer_index]->{$id}->{'pxe_config'};
-                  print "IP Address: $ip, PXE disable from config: $pxe_config\n";
-                  ipamdb_save("$COMPUTER_YAML", $computer_db);
-                  exit;
-                  }
-               $computer_index++;
-               }
+            my $pxe_config = $attribute->{'pxe_config'};
+            $attribute->{'modify_time'} = time;
+            delete $attribute->{'pxe_config'};
+            ipamdb_save("$COMPUTER_YAML", $computer_db);
+            print "Info: IP Address: $ip, PXE disable from config: $pxe_config [OK]\n";
+            exit;
             }
          }
       }
@@ -1971,26 +1965,24 @@ sub cmd_disable_pxe {
          die "Error: Unkown host: $hostname, in domain set: $domainset\n";
          }
 
-      my $computer_index = 0;
-      for my $value (@{$computer_db->{$domainset}}) {
-         for my $id (keys %{$value}) {
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} ne 'pool-dhcp')) {
-               next if not exists $value->{$id}->{'pxe_config'};
+      LOOP_ON_COMPUTER:
+      for my $computer (@{$computer_db->{$domainset}}) {
+         my ($mac_address, $attribute) = %{$computer};
 
-               my $pxe_config = $computer_db->{$domainset}[$computer_index]->{$id}->{'pxe_config'};
-               my $timestamp  = time;
-               $computer_db->{$domainset}[$computer_index]->{$id}->{'modify_time'} = $timestamp;
-               delete $computer_db->{$domainset}[$computer_index]->{$id}->{'pxe_config'};
-               print "Host $hostname ($domainset), PXE disable from config: $pxe_config\n";
-               ipamdb_save("$COMPUTER_YAML", $computer_db);
-               exit;
-               }
+         next LOOP_ON_COMPUTER if $attribute->{'hostname'} eq $hostname;
 
-            if (($value->{$id}->{'hostname'} eq $hostname) and ($value->{$id}->{'address_type'} eq 'pool-dhcp')) {
-               die "Error. Host $hostname ($domainset) in a pool. No PXE possible\n";
-               }
+         if ($attribute->{'address_type'} eq 'pool-dhcp') {
+            die "Error. Host $hostname ($domainset) in a pool. No PXE possible [FAILED]\n";
             }
-         $computer_index++;
+
+         next LOOP_ON_COMPUTER if not exists $attribute->{'pxe_config'};
+
+         my $pxe_config = $attribute->{'pxe_config'};
+         $attribute->{'modify_time'} = time;
+         delete $attribute->{'pxe_config'};
+         ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: Host $hostname ($domainset), PXE disable from config: $pxe_config [OK]\n";
+         exit;
          }
       }
    }
