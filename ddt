@@ -2142,8 +2142,24 @@ sub cmd_upgrade_db {
 #--------------------------------------------------------------------------------
 
 sub cmd_show_domainset {
+   local @ARGV = @_;
+
+   my ($no_header);
+
+   GetOptions(
+      'no-header|H' => \$no_header,
+      );
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
+
+   my $tb_computer = Text::Table->new(
+     {align  => 'left',   align_title => 'left',   title => 'DomainSet'},
+     {is_sep => 1,        body        => '  '},
+     {align  => 'left',   align_title => 'left',   title => 'DNS-Extension:'},
+     {is_sep => 1,        body        => '  '},
+     {align  => 'left',   align_title => 'left',   title => 'Date'},
+     {align  => 'left',   align_title => 'left',   title => 'Comment'},
+     );
 
    LOOP_ON_DOMAIN:
    for my $domainset_current (keys %{$computer_db}) {
@@ -2153,8 +2169,26 @@ sub cmd_show_domainset {
       next if $domainset_current eq 'tag';
       next if $domainset_current eq 'version';
 
-      print "$domainset_current\n";
+      $tb_computer->add($domainset_current) and next LOOP_ON_DOMAIN if not exists $computer_db->{'dset'}{$domainset_current};
+
+      my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $computer_db->{'dset'}{$domainset_current}{'modify_time'};
+      $year += 1900;
+      $mon++;
+      my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
+
+      my $comment = $computer_db->{'dset'}{$domainset_current}{'comment'};
+      $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
+         
+      $tb_computer->add($domainset_current,
+         $computer_db->{'dset'}{$domainset_current}{'dns_extension'},
+         $date,
+         $comment,
+         );
       }
+
+   print $tb_computer->title(),
+         $tb_computer->rule('-') if not $no_header;
+   print $tb_computer->body();
    }
 
 #--------------------------------------------------------------------------------
@@ -3097,7 +3131,7 @@ ddt - management of computer names and IP addresses
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
  ddt search-mac [--mac|-m mac]
- ddt show-domainset
+ ddt show-domainset [--no-header|-H]
  ddt show
  ddt show-pool [--no-header|-H]
  ddt show-pxe [--no-header|-H]
@@ -3191,7 +3225,7 @@ ddt - management of computer names and IP addresses
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
  ddt search-mac [--mac|-m mac]
- ddt show-domainset
+ ddt show-domainset [--no-header|-H]
  ddt show
  ddt show-pool [--no-header|-H]
  ddt show-pxe [--no-header|-H]
@@ -3340,7 +3374,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 show-domainset
 
- ddt show-domainset
+ ddt show-domainset [--no-header|-H]
 
 =head2 show
 
