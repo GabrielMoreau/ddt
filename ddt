@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.9.8');
+use version; our $VERSION = version->declare('0.10.0');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2485,7 +2485,7 @@ sub cmd_generate_dhcp_file {
 #Description: génère les fichiers d'enregistrements DNS
 
 sub cmd_generate_dns_file {
-   my $buffer;
+   my $buffer_fwd;
    my $buffer_rev;
    my $pool_domain;
 
@@ -2499,20 +2499,20 @@ sub cmd_generate_dns_file {
       next if $domainset_current eq 'version';
 
       if ($domainset_current eq 'pool') {
-         #next;
-         for my $value (@{$computer_db->{$domainset_current}}) {
-            for my $pool_name (keys %{$value}) {
-               $pool_domain = $value->{$pool_name}->{'domain'}."\n";
-               #print $value->{$pool_name}->{'file'};
+         LOOP_ON_COMPUTER:
+         for my $computer (@{$computer_db->{$domainset_current}}) {
+            for my $pool_name (keys %{$computer}) {
+               $pool_domain = $computer->{$pool_name}->{'domain'}."\n";
+               #print $computer->{$pool_name}->{'file'};
                chomp $pool_domain;
                open FILE_FORWARD_DNS, '>>', "$FOLDER_GEN_DNS/db.$pool_domain.fwd";
                open FILE_REVERSE_DNS, '>>', "$FOLDER_GEN_DNS/db.$pool_domain.rev";
-               my @T_pool_ip = @{$value->{$pool_name}->{'ip'}};
+               my @T_pool_ip = @{$computer->{$pool_name}->{'ip'}};
                for my $pool_ip (@T_pool_ip) {
                   my @T_split = split(/\./ , $pool_ip);
-                  $buffer     = sprintf "%-24s IN  A  %-15s ;\n", "$pool_name$T_split[3]", $pool_ip;
+                  $buffer_fwd = sprintf "%-24s IN  A  %-15s ;\n", "$pool_name$T_split[3]", $pool_ip;
                   $buffer_rev = "$T_split[3]   IN PTR   $pool_name$T_split[3].$pool_domain.\n";
-                  print FILE_FORWARD_DNS $buffer;
+                  print FILE_FORWARD_DNS $buffer_fwd;
                   print FILE_REVERSE_DNS $buffer_rev;
                   }
                close FILE_FORWARD_DNS;
@@ -2523,45 +2523,49 @@ sub cmd_generate_dns_file {
 
       else {
          #--- Création du fichier non-reverse ---#
-         open ( FILE_FORWARD_DNS, ">> $FOLDER_GEN_DNS/db.$domainset_current.fwd");
-         open ( FILE_REVERSE_DNS, ">> $FOLDER_GEN_DNS/db.$domainset_current.rev");
+         open FILE_FORWARD_DNS, ">> $FOLDER_GEN_DNS/db.$domainset_current.fwd";
+         open FILE_REVERSE_DNS, ">> $FOLDER_GEN_DNS/db.$domainset_current.rev";
+
          my @domainsetdb = @{$computer_db->{$domainset_current}};
-         for my $value (@domainsetdb) {
-            for my $id (keys %{$value}) {
-               #host pcdavoust {  deny-unknown-clients;
-               #hardware ethernet 0:6:5b:b8:13:d1;
-               #fixed-address 194.254.66.72;
-               #}
-               my $hostname = $value->{$id}->{'hostname'};
-               my $ip       = $value->{$id}->{'ip'};
-               my $comment  = $value->{$id}->{'comment'};
-               my $address_type = $value->{$id}->{'address_type'};
-               my $enabled      = $value->{$id}->{'enabled'};
 
-               my $dns_domain = $domainset_current;
-               if (exists $computer_db->{'dset'}{$domainset_current}) {
-                  $dns_domain = $computer_db->{'dset'}{$domainset_current}{'dns_extension'};
-                  }
-               my @T_split = split(/\./ , $ip);
-               if  (($address_type eq 'dhcp') or ($address_type eq 'static')) {
-                  if ($enabled eq 'yes') {
-                     $buffer = sprintf "%-24s IN A %-15s ; %s\n", $hostname, $ip, $comment;
-                     if (exists $value->{$id}->{'dns_extension'}
-                           and "$value->{$id}->{'dns_extension'}" != "$dns_domain") {
-                        print "A FAIRE\n";
-                        }
-                     $buffer_rev = $T_split[3]."     IN PTR   $hostname.$dns_domain.\n";
-                     }
+         LOOP_ON_COMPUTER:
+         for my $computer (@domainsetdb) {
+            my ($mac_address, $attribute) = %{$computer};
 
-                  else {
-                     $buffer = sprintf "%-24s IN A %-15s ; %s\n", $hostname, $ip, $comment;
-                     $buffer_rev = ";".$T_split[3]."    IN PTR   $hostname.$dns_domain.\n";
-                     }
-                  print FILE_REVERSE_DNS $buffer_rev;
-                  print FILE_FORWARD_DNS $buffer;
-                  }
+            #host pcdavoust {  deny-unknown-clients;
+            #hardware ethernet 0:6:5b:b8:13:d1;
+            #fixed-address 194.254.66.72;
+            #}
+
+            my $hostname     = $attribute->{'hostname'};
+            my $ip           = $attribute->{'ip'};
+            my $comment      = $attribute->{'comment'};
+            my $address_type = $attribute->{'address_type'};
+            my $enabled      = $attribute->{'enabled'};
+
+            next LOOP_ON_COMPUTER if not (($address_type eq 'dhcp') or ($address_type eq 'static'));
+
+            my $dns_domain = $domainset_current;
+            if (exists $computer_db->{'dset'}{$domainset_current}) {
+               $dns_domain = $computer_db->{'dset'}{$domainset_current}{'dns_extension'};
                }
-            #$cpt=$cpt+1;
+
+            my @ip_split = split /\./, $ip;
+            if ($enabled eq 'yes') {
+               if (exists $attribute->{'dns_extension'}
+                     and "$attribute->{'dns_extension'}" != "$dns_domain") {
+                  print "A FAIRE\n";
+                  }
+               $buffer_fwd = sprintf "%-24s  IN A   %-15s ; %s\n", $hostname, $ip, $comment;
+               $buffer_rev = sprintf "%3i    IN PTR %-15s\n", $ip_split[3], "$hostname.$dns_domain.";
+               }
+
+            else {
+               $buffer_fwd = sprintf ";%-24s IN A   %-15s ; %s\n", $hostname, $ip, $comment;
+               $buffer_rev = sprintf ";%3i   IN PTR %-15s\n", $ip_split[3], "$hostname.$dns_domain.";
+               }
+            print FILE_REVERSE_DNS $buffer_rev;
+            print FILE_FORWARD_DNS $buffer_fwd;
             }
          print "- DNS: db.$domainset_current.fwd db.$domainset_current.rev [CREATE].\n";
          print "Ex : sort -k 4n -t . /usr/local/dhcp-dns-tools/dns/dns.hmg.priv\n";
