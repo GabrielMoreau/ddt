@@ -2169,7 +2169,7 @@ sub cmd_show_domainset {
       next if $domainset_current eq 'tag';
       next if $domainset_current eq 'version';
 
-      $tb_computer->add($domainset_current) and next LOOP_ON_DOMAIN if not exists $computer_db->{'dset'}{$domainset_current};
+      $tb_computer->add($domainset_current), next LOOP_ON_DOMAIN if not exists $computer_db->{'dset'}{$domainset_current};
 
       my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $computer_db->{'dset'}{$domainset_current}{'modify_time'};
       $year += 1900;
