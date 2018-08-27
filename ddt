@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.10.0');
+use version; our $VERSION = version->declare('0.10.1');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -723,7 +723,7 @@ sub change_mac {
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
 
-         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+         $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
 
          $attribute->{'modify_time'} = time;
          $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
@@ -742,12 +742,12 @@ sub change_mac {
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
 
-         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+         $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          $attribute->{'modify_time'} = time;
          $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update host $hostname MAC: $mac IP: $ip [OK]\n";
+         print "Info: Update HOST: $hostname DOMAINSET: $domainset MAC: $mac IP: $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
@@ -984,7 +984,7 @@ sub cmd_change_domainset {
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
 
-         $computer_index++ and next LOOP_ON_COMPUTER if $mac_address ne $mac;
+         $computer_index++, next LOOP_ON_COMPUTER if $mac_address ne $mac;
          next LOOP_ON_DOMAINSET if $attribute->{'ip'} ne $ip;
 
          $attribute->{'modify_time'} = time;
@@ -1441,7 +1441,7 @@ sub del_pc {
       for my $computer (@{$computer_db->{$domainset}}) {
          my ($mac_address, $attribute) = %{$computer};
 
-         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+         $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
          
          splice(@{$computer_db->{$domainset}}, $computer_index => 1);
          ipamdb_save("$COMPUTER_YAML", $computer_db);
@@ -1460,7 +1460,7 @@ sub del_pc {
       for my $computer (@{$computer_db->{$domainset}}) {
          my ($mac_address, $attribute) = %{$computer};
 
-         $computer_index++ and next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+         $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
             die "Error: Host remove $hostname from the domain set $domainset [FAILED]" .
@@ -1504,7 +1504,7 @@ sub del_float {
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
 
-         $computer_index++ and next LOOP_ON_COMPUTER if $mac_address ne $mac;
+         $computer_index++, next LOOP_ON_COMPUTER if $mac_address ne $mac;
 
          if ($attribute->{'ip'} ne $pool) {
             die "Error: Host remove $mac [FAILED]" .
