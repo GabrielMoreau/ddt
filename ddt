@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.10.2');
+use version; our $VERSION = version->declare('0.10.3');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -726,7 +726,7 @@ sub change_mac {
          next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
 
          $attribute->{'modify_time'} = time;
-         $computer->{$mac} = $attribut;      # add new mac
+         $computer->{$mac} = $attribute;     # add new mac
          delete $computer->{$mac_address};   # remove old mac
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
@@ -747,7 +747,7 @@ sub change_mac {
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          $attribute->{'modify_time'} = time;
-         $computer->{$mac} = $attribut;      # add new mac
+         $computer->{$mac} = $attribute;     # add new mac
          delete $computer->{$mac_address};   # remove old mac
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);

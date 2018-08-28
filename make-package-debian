@@ -13,7 +13,7 @@ tmp_folder=$(mktemp --directory /tmp/ddt-XXXXXX)
 # Set Name and Version
 PKG_NAME=ddt
 CODE_VERSION=$(grep 'version->declare' ddt | cut -f 2 -d "'") #'
-PKG_VERSION=6
+PKG_VERSION=1
 
 # Create future tree
 mkdir -p ${tmp_folder}/usr/bin
