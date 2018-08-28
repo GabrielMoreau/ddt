@@ -272,7 +272,7 @@ sub control_syntax_mac_address {
       return 1;
       }
 
-   print {*STDERR} "Error: Bad MAC syntax: $mac\n";
+   print {*STDERR} "Error: bad MAC syntax: $mac\n";
    return 0;
    }
 
@@ -288,7 +288,7 @@ sub control_syntax_ip {
       my @ip_split = split /\./, $ip;
 
       if ( scalar(@ip_split) != 4 ) {
-         print {*STDERR} "Error: Bad IP syntax: $ip\n";
+         print {*STDERR} "Error: bad IP syntax: $ip\n";
          return 0;
          }
       }
@@ -301,17 +301,17 @@ sub control_syntax_comment {
    my $comment = shift;
 
    if ($comment !~ m{^20\d\d-\d\d-\d\d\s}) {
-      print {*STDERR} "Syntax Error: No date like 2014-01-10 at the beginning: $comment\n";
+      print {*STDERR} "Error: no date like 2014-01-10 at the beginning: $comment\n";
       return 0;
       }
 
    if ($comment !~ m{\(\w+\)$}) {
-      print {*STDERR} "Syntax Error: No (SERVICE) at the end: $comment\n";
+      print {*STDERR} "Error: no (SERVICE) at the end: $comment\n";
       return 0;
       }
 
    if ($comment =~ m{\s\s}) {
-      print {*STDERR} "Syntax Error: Double space: $comment\n";
+      print {*STDERR} "Error: double space: $comment\n";
       return 0;
       }
    return 1;
@@ -418,7 +418,7 @@ sub add_alias {
    my ($computer_db, $hostname, $domainset, $alias) = @_;
 
    control_exist_domainset($computer_db, $domainset) or exit;
-   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: host already exist in domain set $domainset: $hostname\n";
 
    my @domainsetdb = @{$computer_db->{$domainset}};
 
@@ -446,11 +446,11 @@ sub add_static {
 
    $mac = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
-   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: host already exist in domain set $domainset: $hostname\n";
    control_syntax_mac_address($mac)                   or exit;
-   control_exist_mac($computer_db, $mac)              or die "Error: Physical MAC address already exists: $mac\n";
+   control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    control_syntax_ip($ip)                             or exit;
-   control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in domain set attachement $domainset: $ip\n";
+   control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in domain set $domainset: $ip\n";
    control_syntax_comment($comment)                   or exit;
    my $timestamp = time;
    push @{$computer_db->{$domainset}}, { $mac => {
@@ -463,7 +463,7 @@ sub add_static {
       'comment'      => $comment,
       'alias'        =>  '',
       }};
-   print "Info: Add the host: $hostname, IP: $ip, MAC: $mac, Domain Set: $domainset [OK]\n";
+   print "Info: Add the host: $hostname, IP: $ip, MAC: $mac, domain set: $domainset [OK]\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -481,11 +481,11 @@ sub add_dhcp {
    $mac = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
    control_exist_domainset($computer_db, $domainset)  or exit;
-   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: host already exist in domain set $domainset: $hostname\n";
    control_syntax_mac_address($mac)                   or exit;
-   control_exist_mac($computer_db, $mac)              or die "Error: Physical MAC address already exists: $mac\n";
+   control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    control_syntax_ip($ip)                             or exit;
-   control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in domain set attachement $domainset: $ip.\n";
+   control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in domain set $domainset: $ip.\n";
    control_syntax_comment($comment)                   or exit;
 
    push @{$computer_db->{$domainset}}, { $mac => {
@@ -498,7 +498,7 @@ sub add_dhcp {
       'comment'      => $comment,
       'alias'        => '',
       }};
-   print "Add the computer: $hostname, IP: $ip, MAC: $mac, Domain Set: $domainset\n";
+   print "Add the computer: $hostname, IP: $ip, MAC: $mac, domain set: $domainset\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -514,8 +514,8 @@ sub add_float {
    $comment = normalize_comment($comment);
    control_exist_domainset($computer_db, $domainset)  or exit;
    control_syntax_mac_address($mac)                   or exit;
-   control_exist_mac($computer_db, $mac)              or die "Error: Physical MAC address already exists: $mac\n";
-   control_exist_pool($computer_db, $pool)            or die "Error: The pool doesn't exists: $pool\n";
+   control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
+   control_exist_pool($computer_db, $pool)            or die "Error: the pool doesn't exists: $pool\n";
    control_syntax_comment($comment)                   or exit;
    push @{$computer_db->{$domainset}}, { $mac => {
       'hostname'     => $pool,
@@ -526,7 +526,7 @@ sub add_float {
       'modify_time'  => $timestamp,
       'comment'      => $comment,
       }};
-   print "Info: Add the computer in pool MAC: $mac, Domain Set: $domainset, Pool: $pool [OK]\n";
+   print "Info: Add the computer in pool MAC: $mac, domain set: $domainset, Pool: $pool [OK]\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -668,14 +668,14 @@ sub cmd_add_virtual {
    my $timestamp = time;
 
    control_exist_domainset($computer_db, $domainset)           or exit;
-   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: host already exist in domain set $domainset: $hostname\n";
    control_syntax_ip($ip)                                      or exit;
-   control_exist_ip($computer_db, $ip)                         or die "Error: IP address already exist in domain set attachement $domainset: $ip.\n";
+   control_exist_ip($computer_db, $ip)                         or die "Error: IP address already exist in domain set $domainset: $ip.\n";
    control_syntax_comment($comment)                            or exit;
 
    my $mac = join ':', 'FF', 'FF', map({sprintf("%02X", $_)} split(/\./, $ip));
    control_syntax_mac_address($mac)             or exit;
-   control_exist_mac($computer_db, $mac)         or die "Error: Virtual Physical MAC address already exists: $mac\n";
+   control_exist_mac($computer_db, $mac)         or die "Error: virtual physical MAC address already exists: $mac\n";
 
    push @{$computer_db->{$domainset}}, { $mac => {
       'hostname'     => $hostname,
@@ -686,7 +686,7 @@ sub cmd_add_virtual {
       'modify_time'  => $timestamp,
       'comment'      => $comment,
       }};
-   print "Add the virtual computer: $hostname, IP: $ip, Domain Set: $domainset\n";
+   print "Add the virtual computer: $hostname, IP: $ip, domain set: $domainset\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -710,44 +710,48 @@ sub change_mac {
    $mac = normalize_mac_address($mac);
    control_exist_domainset($computer_db, $domainset)  or exit;
    control_syntax_mac_address($mac)                   or exit;
-   control_exist_mac($computer_db, $mac)              or die "Error: Physical MAC address already exists: $mac\n";
+   control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    if ($ip ne '') {
       control_syntax_ip($ip) or exit;
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         print "Error: Unkown IP address: $ip\n";
+         print "Error: unkown IP address: $ip\n";
          exit;
          }
       my @domainsetdb = @{$computer_db->{$domainset}};
-      my $computer_index = 0;
       LOOP_ON_COMPUTER:
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
+         die "Error: physical MAC address $mac already exists in domain set $domainset\n" if $mac_address eq $mac;
 
-         $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+         next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
 
          $attribute->{'modify_time'} = time;
-         $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
+         $computer->{$mac} = $attribut;      # add new mac
+         delete $computer->{$mac_address};   # remove old mac
+
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update host $hostname MAC: $mac IP: $ip [OK]\n";
+         print "Info: Update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
    elsif ($hostname ne '') {
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         die "Error: unkown Host: $hostname, in Domain Set: $domainset\n";
          }
       my @domainsetdb = @{$computer_db->{$domainset}};
-      my $computer_index = 0;
       LOOP_ON_COMPUTER:
       for my $computer (@domainsetdb) {
          my ($mac_address, $attribute) = %{$computer};
+         die "Error: physical MAC address $mac already exists in domain set $domainset\n" if $mac_address eq $mac;
 
-         $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+         next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          $attribute->{'modify_time'} = time;
-         $computer_db->{$domainset}[$computer_index] = { $mac => $attribute };
+         $computer->{$mac} = $attribut;      # add new mac
+         delete $computer->{$mac_address};   # remove old mac
+
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update HOST: $hostname DOMAINSET: $domainset MAC: $mac IP: $attribute->{'ip'} [OK]\n";
+         print "Info: Update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
@@ -765,10 +769,10 @@ sub change_ip {
 
    control_exist_domainset($computer_db, $domainset) or exit;
    if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-      die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+      die "Error: unkown host: $hostname, in domain set: $domainset\n";
       }
    control_syntax_ip($ip) or exit;
-   control_exist_ip($computer_db, $ip) or die "Error: IP address already exist in domain set attachement $domainset: $ip\n";
+   control_exist_ip($computer_db, $ip) or die "Error: IP address already exist in domain set $domainset: $ip\n";
 
    my @domainsetdb = @{$computer_db->{$domainset}};
 
@@ -779,7 +783,7 @@ sub change_ip {
       next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
  
       if ($attribute->{'address_type'} eq 'pool-dhcp') {
-         die "Error: Host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
+         die "Error: host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
             " ... use 'del-float' command before";
          }
 
@@ -803,9 +807,9 @@ sub change_host {
    control_exist_domainset($computer_db, $domainset) or exit;
    control_syntax_ip($ip)   or exit;
    if ( control_exist_ip($computer_db, $ip) == 1 ) {
-      die "Error: Unkown IP address: $ip\n";
+      die "Error: unkown IP address: $ip\n";
       }
-   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+   control_exist_hostname($computer_db, $domainset, $hostname) or die "Error: host already exist in domain set $domainset: $hostname\n";
 
    my @domainsetdb = @{$computer_db->{$domainset}};
 
@@ -822,7 +826,7 @@ sub change_host {
       exit;
       }
 
-   die "Error: Failed to update hostname $hostname [FAILED]\n" .
+   die "Error: failed to update hostname $hostname [FAILED]\n" .
       " ... no IP $ip belongs to the domain set $domainset\n";
    }
 
@@ -995,7 +999,7 @@ sub cmd_change_domainset {
          exit;
          }
       }
-   die "Error: Update of domain set $domainset [FAILED]\n" .
+   die "Error: update of domain set $domainset [FAILED]\n" .
       " ... MAC $mac and IP $ip don't exists in the database\n";
    }
 
@@ -1030,7 +1034,7 @@ sub cmd_change_tag {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    if ($tags !~ m/^ (?:\w+,)* \w+ $/xms) {
-      die "Error: Bad format for tags (comma separated list): $tags\n";
+      die "Error: bad format for tags (comma separated list): $tags\n";
       }
 
    for my $tag (split/,/, $tags) {
@@ -1077,7 +1081,7 @@ sub disable_pc {
    if ($ip ne '') { # disable by IP
       control_syntax_ip($ip);
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         die "Error: Unkown IP address: $ip [FAILED]\n";
+         die "Error: unkown IP address: $ip [FAILED]\n";
          }
 
       for my $domainset_current (keys %{$computer_db}) {
@@ -1113,7 +1117,7 @@ sub disable_pc {
    else { # disable by Hostname
       control_exist_domainset($computer_db, $domainset);
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset [FAILED]\n";
+         die "Error: unkown host: $hostname, in domain set: $domainset [FAILED]\n";
          }
 
       LOOP_ON_COMPUTER:
@@ -1123,7 +1127,7 @@ sub disable_pc {
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error: Host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
+            die "Error: host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
                " ... use 'disable-float' command instead";
             }
 
@@ -1153,7 +1157,7 @@ sub disable_float {
 
    my $computer_index;
    if ( control_exist_mac($computer_db, $mac) == 1 ) {
-      die "Error: Unkown physical MAC address: $mac [FAILED]\n";
+      die "Error: unkown physical MAC address: $mac [FAILED]\n";
       }
 
    for my $domainset_current (keys %{$computer_db}) {
@@ -1185,7 +1189,7 @@ sub disable_float {
             exit;
             }
          else {
-            die "Error: Host disable $mac [FAILED]" .
+            die "Error: host disable $mac [FAILED]" .
                " ... The host $mac does not belong to the $pool pool.\n";
             }
          }
@@ -1206,7 +1210,7 @@ sub enable_pc {
    if ($ip ne '') { # enable by IP
       control_syntax_ip($ip);
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         print "Error: Unkown IP address: $ip\n";
+         print "Error: unkown IP address: $ip\n";
          exit;
          }
 
@@ -1243,7 +1247,7 @@ sub enable_pc {
       }
    else { # enable by Hostname
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         die "Error: unkown host: $hostname, in domain set: $domainset\n";
          }
 
       LOOP_ON_COMPUTER:
@@ -1252,7 +1256,7 @@ sub enable_pc {
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error: Host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
+            die "Error: host $hostname from domain set $domainset belongs to a a pool [FAILED]" .
                " ... use 'enable-float' command instead";
             }
 
@@ -1281,7 +1285,7 @@ sub enable_float {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    if ( control_exist_mac($computer_db, $mac) == 1 ) {
-      die "Error: Unkown physical MAC address: $mac [FAILED]\n";
+      die "Error: unkown physical MAC address: $mac [FAILED]\n";
       }
 
    for my $domainset_current (keys %{$computer_db}) {
@@ -1299,7 +1303,7 @@ sub enable_float {
          next LOOP_ON_COMPUTER if $mac_address ne $mac;
 
          if ($attribute->{'ip'} ne $pool) {
-            die "Error: Host enable $mac [FAILED]" .
+            die "Error: host enable $mac [FAILED]" .
                " ... The host $mac does not belong to the $pool pool.\n";
             }
 
@@ -1432,7 +1436,7 @@ sub del_pc {
    control_exist_domainset($computer_db, $domainset) or exit;
    if ($ip ne '') { # delete by IP
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         die "Error: Unkown IP address: $ip\n";
+         die "Error: unkown IP address: $ip\n";
          }
 
       my $computer_index = 0;
@@ -1451,7 +1455,7 @@ sub del_pc {
       }
    else {
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         die "Error: unkown host: $hostname, in domain set: $domainset\n";
          }
 
       my $computer_index = 0;
@@ -1463,7 +1467,7 @@ sub del_pc {
          $computer_index++, next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error: Host remove $hostname from the domain set $domainset [FAILED]" .
+            die "Error: host remove $hostname from the domain set $domainset [FAILED]" .
                " ... The host $hostname belongs to a DHCP pool.\n";
             }
 
@@ -1507,7 +1511,7 @@ sub del_float {
          $computer_index++, next LOOP_ON_COMPUTER if $mac_address ne $mac;
 
          if ($attribute->{'ip'} ne $pool) {
-            die "Error: Host remove $mac [FAILED]" .
+            die "Error: host remove $mac [FAILED]" .
                " ... The host $mac does not belong to the $pool pool.\n";
             }
 
@@ -1593,7 +1597,7 @@ sub cmd_create_domainset {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    $computer_db->{'dset'} ||= {};
-   die "Error: Domain Set already exists: $domainset\n" if exists $computer_db->{'dset'}{$domainset};
+   die "Error: domain set already exists: $domainset\n" if exists $computer_db->{'dset'}{$domainset};
 
    control_syntax_comment($comment)    or exit;
 
@@ -1604,7 +1608,7 @@ sub cmd_create_domainset {
       'create_time'     => $timestamp,
       'modify_time'     => $timestamp,
       };
-   $computer_db->{$domainset} ||= []; # Create empty Domain Set computer list by default
+   $computer_db->{$domainset} ||= []; # Create empty domain set computer list by default
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
 
@@ -1641,7 +1645,7 @@ sub cmd_create_pool {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    if ($computer_db->{'pool'}) {
-      die "Error: Pool already exists: $pool\n" if exists $computer_db->{'pool'}{$pool};
+      die "Error: pool already exists: $pool\n" if exists $computer_db->{'pool'}{$pool};
       }
 
    #--- control if the domain's pool exist ---#
@@ -1656,7 +1660,7 @@ sub cmd_create_pool {
             my ($first, $last) = split /-/, $range;
             for (my $cpt = $first; $cpt <= $last; $cpt++) {
                my $ip_loc = "$ip1.$ip2.$ip3.$cpt";
-               control_syntax_ip($ip_loc) or die "Error: Bad IP syntax: $ip_loc\n";
+               control_syntax_ip($ip_loc) or die "Error: bad IP syntax: $ip_loc\n";
                control_exist_ip($computer_db, $ip_loc) or die "Error: IP address already exists: $ip_loc\n";
                push @ip_list, $ip_loc;
                }
@@ -1738,7 +1742,7 @@ sub cmd_create_pxe {
    $computer_db->{'pxe'} ||= {};
    die "Error: PXE config already exists: $pxe_config\n" if exists $computer_db->{'pxe'}{$pxe_config};
 
-   control_syntax_ip($ip_next_server)  or die "Error: Bad IP syntax: $ip_next_server\n";
+   control_syntax_ip($ip_next_server)  or die "Error: bad IP syntax: $ip_next_server\n";
    control_syntax_comment($comment)    or exit;
 
    my $timestamp = time;
@@ -1854,7 +1858,7 @@ sub cmd_enable_pxe {
    if ($ip ne '') {
       control_syntax_ip($ip);
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         die "Error: Unkown IP address: $ip\n";
+         die "Error: unkown IP address: $ip\n";
          }
 
       for my $domainset_current (keys %{$computer_db}) {
@@ -1871,7 +1875,7 @@ sub cmd_enable_pxe {
                   my $timestamp = time;
                   $computer_db->{$domainset_current}[$computer_index]->{$id}->{'modify_time'} = $timestamp;
                   $computer_db->{$domainset_current}[$computer_index]->{$id}->{'pxe_config'}  = $pxe_config;
-                  print "IP Address: $ip, PXE enabled in config: $pxe_config\n";
+                  print "IP address: $ip, PXE enabled in config: $pxe_config\n";
                   ipamdb_save("$COMPUTER_YAML", $computer_db);
                   exit;
                   }
@@ -1882,7 +1886,7 @@ sub cmd_enable_pxe {
       }
    else {
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         die "Error: unkown host: $hostname, in domain set: $domainset\n";
          }
 
       LOOP_ON_COMPUTER:
@@ -1933,7 +1937,7 @@ sub cmd_disable_pxe {
    if ($ip ne '') {
       control_syntax_ip($ip);
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
-         die "Error: Unkown IP address: $ip\n";
+         die "Error: unkown IP address: $ip\n";
          }
 
       for my $domainset_current (keys %{$computer_db}) {
@@ -1954,14 +1958,14 @@ sub cmd_disable_pxe {
             $attribute->{'modify_time'} = time;
             delete $attribute->{'pxe_config'};
             ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Info: IP Address: $ip, PXE disable from config: $pxe_config [OK]\n";
+            print "Info: IP address: $ip, PXE disable from config: $pxe_config [OK]\n";
             exit;
             }
          }
       }
    else {
       if ( control_exist_hostname($computer_db, $domainset, $hostname) == 1 ) {
-         die "Error: Unkown host: $hostname, in domain set: $domainset\n";
+         die "Error: unkown host: $hostname, in domain set: $domainset\n";
          }
 
       LOOP_ON_COMPUTER:
@@ -1971,7 +1975,7 @@ sub cmd_disable_pxe {
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} eq $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error. Host $hostname ($domainset) in a pool. No PXE possible [FAILED]\n";
+            die "Error: host $hostname ($domainset) in a pool. No PXE possible [FAILED]\n";
             }
 
          next LOOP_ON_COMPUTER if not exists $attribute->{'pxe_config'};
@@ -2015,7 +2019,7 @@ sub cmd_create_tag {
    die "Error: TAG 'universal' is intrinsic. It's not possible to create it.\n" if $tag eq 'universal';
 
    if ($tag !~ m/^ \w+ $/xms) {
-      die "Error: Bad format for TAG (alphanumeric string): $tag\n";
+      die "Error: bad format for TAG (alphanumeric string): $tag\n";
       }
 
    control_syntax_comment($comment) or exit;
@@ -2064,7 +2068,7 @@ sub cmd_remove_tag {
 
          if (exists $attribute->{'tag'}) {
             my $hostname = $attribute->{'hostname'};
-            die "Error: Computer still use this TAG: $hostname.$domainset_current $mac_address\n" if $tag eq $attribute->{'tag'};
+            die "Error: computer still use this TAG: $hostname.$domainset_current $mac_address\n" if $tag eq $attribute->{'tag'};
             }
          }
       }
@@ -2709,12 +2713,12 @@ sub load_data_dhcp {
          $cpt = 0;
 
          if ( control_exist_hostname($computer_db, $domainset, $hostname) == 0 ) {
-            print "Error: Hostname already exist in domain set attachement $domainset: $hostname\n";
+            print "Error: host already exist in domain set $domainset: $hostname\n";
             next;
             }
          control_syntax_mac_address($mac) or next;
          if ( control_exist_mac($computer_db, $mac) == 0) {
-            print "Error: Physical MAC address already exists: $mac\n";
+            print "Error: physical MAC address already exists: $mac\n";
             next;
             }
 
@@ -2769,13 +2773,13 @@ sub load_data_pool {
          my $mac = $T_mac[1].":".$T_mac[2].":".$T_mac[3].":".$T_mac[4].":".$T_mac[5].":".$T_mac[6];
          control_syntax_mac_address($mac) or next;
          if (control_exist_mac($computer_db, $mac) == 0) {
-            print "Error: Physical MAC address already exists: $mac\n";
+            print "Error: physical MAC address already exists: $mac\n";
             next;
             }
 
          #--- cette partie teste si le pool existe.
          if (not exists $computer_db->{'pool'}{$pool}) {
-            print "Error: Create pool with create_pool command before load database: $pool\n";
+            print "Error: create pool with create_pool command before load database: $pool\n";
             exit;
             }
 
@@ -2792,7 +2796,7 @@ sub load_data_pool {
             }
          else {
             print "Ajout de la machine $mac [FAILED]\n";
-            print "Error: The pool doesn't exists: $pool, for the domain: $domainset\n";
+            print "Error: the pool doesn't exists: $pool, for the domain: $domainset\n";
             }
          }
       }
@@ -2849,7 +2853,7 @@ sub backup_database {
    $mon++;
    my $date = sprintf '%04i-%02i-%02i-%02i-%02i-%02i', $year, $mon, $mday, $hour, $min, $sec;
 
-   copy($COMPUTER_YAML, "$FOLDER_BACKUP/$COMPUTER_BASENAME-$date.conf") or die "Error: Database copy backup failed: $!\n";
+   copy($COMPUTER_YAML, "$FOLDER_BACKUP/$COMPUTER_BASENAME-$date.conf") or die "Error: database copy backup failed: $!\n";
    }
 
 #-------------------------------------------------------------------------------
