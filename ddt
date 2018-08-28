@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.10.1');
+use version; our $VERSION = version->declare('0.10.2');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -432,7 +432,7 @@ sub add_alias {
       $attribute->{'alias'}       = $alias;
       $attribute->{'modify_time'} = time;
       ipamdb_save("$COMPUTER_YAML", $computer_db);
-      print "Info: Update attribute alias to $alias for host $hostname [OK]\n";
+      print "Info: update attribute alias to $alias for host $hostname [OK]\n";
       exit;
       }
    }
@@ -463,7 +463,7 @@ sub add_static {
       'comment'      => $comment,
       'alias'        =>  '',
       }};
-   print "Info: Add the host: $hostname, IP: $ip, MAC: $mac, domain set: $domainset [OK]\n";
+   print "Info: add the host: $hostname, IP: $ip, MAC: $mac, domain set: $domainset [OK]\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -526,7 +526,7 @@ sub add_float {
       'modify_time'  => $timestamp,
       'comment'      => $comment,
       }};
-   print "Info: Add the computer in pool MAC: $mac, domain set: $domainset, Pool: $pool [OK]\n";
+   print "Info: add the computer in pool MAC: $mac, domain set: $domainset, Pool: $pool [OK]\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -730,7 +730,7 @@ sub change_mac {
          delete $computer->{$mac_address};   # remove old mac
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
+         print "Info: update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
@@ -751,7 +751,7 @@ sub change_mac {
          delete $computer->{$mac_address};   # remove old mac
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
+         print "Info: update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
@@ -790,7 +790,7 @@ sub change_ip {
       $attribute->{'modify_time'} = time;
       $attribute->{'ip'}          = $ip;
       ipamdb_save("$COMPUTER_YAML", $computer_db);
-      print "Info: Update host $hostname MAC: $mac_address IP: $ip [OK]\n";
+      print "Info: update host $hostname MAC: $mac_address IP: $ip [OK]\n";
       exit;
       }
    }
@@ -822,7 +822,7 @@ sub change_host {
       $attribute->{'modify_time'} = time;
       $attribute->{'hostname'}    = $hostname;
       ipamdb_save("$COMPUTER_YAML", $computer_db);
-      print "Info: Update host $hostname MAC: $mac_address IP: $ip [OK]\n";
+      print "Info: update host $hostname MAC: $mac_address IP: $ip [OK]\n";
       exit;
       }
 
@@ -1108,7 +1108,7 @@ sub disable_pc {
             $attribute->{'modify_time'} = $timestamp;
             $attribute->{'enabled'}     = 'no';
             ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Info: Disabling IP $ip from domain set $domainset_current [OK]" .
+            print "Info: disabling IP $ip from domain set $domainset_current [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
@@ -1141,7 +1141,7 @@ sub disable_pc {
          $attribute->{'modify_time'} = $timestamp;
          $attribute->{'enabled'}     = 'no';
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Disabling host $hostname from domain set $domainset [OK]" .
+         print "Info: disabling host $hostname from domain set $domainset [OK]" .
             " ... Status: $attribute->{'enabled'}\n";
          exit;
          }
@@ -1316,7 +1316,7 @@ sub enable_float {
          $attribute->{'modify_time'} = $timestamp;
          $attribute->{'enabled'}     = 'yes';
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Enabling host $mac from pool $pool [OK]" .
+         print "Info: enabling host $mac from pool $pool [OK]" .
             " ... Status: $attribute->{'enabled'}\n";
          exit;
          }
