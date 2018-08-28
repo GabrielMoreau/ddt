@@ -2159,10 +2159,11 @@ sub cmd_show_domainset {
      {is_sep => 1,        body        => '  '},
      {align  => 'left',   align_title => 'left',   title => 'Date'},
      {align  => 'left',   align_title => 'left',   title => 'Comment'},
+     {align  => 'left',   align_title => 'left',   title => 'Category'},
      );
 
    LOOP_ON_DOMAIN:
-   for my $domainset_current (keys %{$computer_db}) {
+   for my $domainset_current (sort keys %{$computer_db}) {
       next if $domainset_current eq 'dset';
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
@@ -2176,13 +2177,16 @@ sub cmd_show_domainset {
       $mon++;
       my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
 
+      my $category;
       my $comment = $computer_db->{'dset'}{$domainset_current}{'comment'};
       $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
-         
+      $comment =~ s/\s+(\(\w+\))$// and $category = $1;
+
       $tb_computer->add($domainset_current,
          $computer_db->{'dset'}{$domainset_current}{'dns_extension'},
          $date,
          $comment,
+         $category,
          );
       }
 
