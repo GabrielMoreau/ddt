@@ -1132,7 +1132,7 @@ sub disable_pc {
             }
 
          if ($attribute->{'enabled'} eq 'no') {
-            print "Info: Host $hostname from domain set $domainset is already disable [OK]" .
+            print "Info: host $hostname from domain set $domainset is already disable [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
@@ -1155,7 +1155,6 @@ sub disable_float {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   my $computer_index;
    if ( control_exist_mac($computer_db, $mac) == 1 ) {
       die "Error: unkown physical MAC address: $mac [FAILED]\n";
       }
@@ -1176,7 +1175,7 @@ sub disable_float {
 
          if ($attribute->{'ip'} eq $pool) {
             if ($attribute->{'enabled'} eq 'no') {
-               print "Info: Host $mac from pool $pool is already disable [OK]" .
+               print "Info: host $mac from pool $pool is already disable [OK]" .
                   " ... Status: $attribute->{'enabled'}\n";
                exit;
                }
@@ -1184,7 +1183,7 @@ sub disable_float {
             $attribute->{'modify_time'} = $timestamp;
             $attribute->{'enabled'}     = 'no';
             ipamdb_save("$COMPUTER_YAML", $computer_db);
-            print "Info: Disabling host $mac from pool $pool [OK]" .
+            print "Info: disabling host $mac from pool $pool [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
@@ -1261,7 +1260,7 @@ sub enable_pc {
             }
 
          if ($attribute->{'enabled'} eq 'yes') {
-            print "Info: Host $hostname belongs to domain set $domainset is already enable [OK]" .
+            print "Info: host $hostname belongs to domain set $domainset is already enable [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
@@ -1270,7 +1269,7 @@ sub enable_pc {
          $attribute->{'modify_time'} = $timestamp;
          $attribute->{'enabled'}     = 'yes';
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Host $hostname is now enable [OK]" .
+         print "Info: host $hostname is now enable [OK]" .
             " ... Status: $attribute->{'enabled'}\n";
          exit;
          }
@@ -1308,7 +1307,7 @@ sub enable_float {
             }
 
          if ($attribute->{'enabled'} eq 'yes') {
-            print "Info: Host $mac from pool $pool is already enable [OK]" .
+            print "Info: host $mac from pool $pool is already enable [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
             exit;
             }
@@ -1449,7 +1448,7 @@ sub del_pc {
          
          splice(@{$computer_db->{$domainset}}, $computer_index => 1);
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Host $ip has been removed from the domain set $domainset [OK]\n";
+         print "Info: host $ip has been removed from the domain set $domainset [OK]\n";
          exit;
          }
       }
@@ -1473,7 +1472,7 @@ sub del_pc {
 
          splice(@{$computer_db->{$domainset}}, $computer_index => 1);
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Host $hostname has been removed from the domain set $domainset [OK]\n";
+         print "Info: host $hostname has been removed from the domain set $domainset [OK]\n";
          exit;
          }
       }
@@ -1868,19 +1867,16 @@ sub cmd_enable_pxe {
          next if $domainset_current eq 'tag';
          next if $domainset_current eq 'version';
 
-         my $computer_index = 0;
+         LOOP_ON_COMPUTER:
          for my $computer (@{$computer_db->{$domainset_current}}) {
-            for my $id (keys %{$computer}) {
-               if ($computer->{$id}->{'ip'} eq $ip) {
-                  my $timestamp = time;
-                  $computer_db->{$domainset_current}[$computer_index]->{$id}->{'modify_time'} = $timestamp;
-                  $computer_db->{$domainset_current}[$computer_index]->{$id}->{'pxe_config'}  = $pxe_config;
-                  print "IP address: $ip, PXE enabled in config: $pxe_config\n";
-                  ipamdb_save("$COMPUTER_YAML", $computer_db);
-                  exit;
-                  }
-               $computer_index++;
-               }
+            my ($mac_address, $attribute) = %{$computer};
+            next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+
+            $attribute->{'modify_time'} = time;
+            $attribute->{'pxe_config'}  = $pxe_config;
+            ipamdb_save("$COMPUTER_YAML", $computer_db);
+            print "Info: host $attribute->{'hostname'} ($domainset_current), IP $ip, PXE enabled: $pxe_config\n";
+            exit;
             }
          }
       }
@@ -1901,7 +1897,7 @@ sub cmd_enable_pxe {
          $attribute->{'modify_time'} = time;
          $attribute->{'pxe_config'}  = $pxe_config;
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Host $hostname ($domainset), PXE enabled in config: $pxe_config [OK]\n";
+         print "Info: host $hostname ($domainset), IP $attribute->{'ip'}, PXE enabled: $pxe_config [OK]\n";
          exit;
          }
       }
@@ -1984,7 +1980,7 @@ sub cmd_disable_pxe {
          $attribute->{'modify_time'} = time;
          delete $attribute->{'pxe_config'};
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: Host $hostname ($domainset), PXE disable from config: $pxe_config [OK]\n";
+         print "Info: host $hostname ($domainset), PXE disable from config: $pxe_config [OK]\n";
          exit;
          }
       }
