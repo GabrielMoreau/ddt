@@ -730,7 +730,7 @@ sub change_mac {
          delete $computer->{$mac_address};   # remove old mac
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
+         print "Info: update host $attribute->{'hostname'}, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
@@ -751,7 +751,7 @@ sub change_mac {
          delete $computer->{$mac_address};   # remove old mac
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
-         print "Info: update host $hostname, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
+         print "Info: update host $attribute->{'hostname'}, domain set $domainset, MAC $mac, IP $attribute->{'ip'} [OK]\n";
          exit;
          }
       }
