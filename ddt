@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.10.4');
+use version; our $VERSION = version->declare('0.10.5');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2656,21 +2656,25 @@ sub cmd_check_dns {
          }
       }
 
-   LOOP_ON_DNS:
-   my @dns_domain_list = map $computer_db->{'dset'}{$_}{'dns_extension'}, 
-      grep exists($computer_db->{'dset'}{$_}{'dns_extension'}), keys $computer_db->{'dset'};
-   for my $dns (@dns_domain_list) {
-      last LOOP_ON_DNS if not $opt_reverse;     # No DNS to DDT check
-      LOOP_ON_IP:
-      for (shell_command("host -t A -l $dns")) {
-         # smtp2.legi.grenoble-inp.fr has address 194.254.67.37
-         next if not m/has address/;
-         next if not m/^(\w[\w-_\.]+\w)\s+has\saddress\s+(\d[\d\.]+\d)$/;
-         my ($hostname_fq, $ip) = ($1, $2);
-         control_syntax_ip($ip) or next LOOP_ON_IP;
-         if (control_exist_ip($computer_db, $ip) == 1) {
-            printf "Unkown IP: %015s / %s\n", $ip, $hostname_fq;
-            next LOOP_ON_IP;
+   if ($opt_reverse) {  # No DNS to DDT check
+      my %saw; # count for unique member
+      my @dns_domain_list = sort grep !$saw{$_}++,
+         map $computer_db->{'dset'}{$_}{'dns_extension'},
+         grep exists($computer_db->{'dset'}{$_}{'dns_extension'}),
+         keys $computer_db->{'dset'};
+      LOOP_ON_DNS:
+      for my $dns (@dns_domain_list) {
+         LOOP_ON_IP:
+         for (shell_command("host -t A -l $dns")) {
+            # smtp2.legi.grenoble-inp.fr has address 194.254.67.37
+            next if not m/has address/;
+            next if not m/^(\w[\w-_\.]+\w)\s+has\saddress\s+(\d[\d\.]+\d)$/;
+            my ($hostname_fq, $ip) = ($1, $2);
+            control_syntax_ip($ip) or next LOOP_ON_IP;
+            if (control_exist_ip($computer_db, $ip) == 1) {
+               printf "Unkown IP: %015s / %s\n", $ip, $hostname_fq;
+               next LOOP_ON_IP;
+               }
             }
          }
       }
