@@ -2603,11 +2603,24 @@ sub shell_command {
    return @result;
    }
 
+#--------------------------------------------------------------------------------
+
 sub cmd_check_dns {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($opt_direct, $opt_reverse);
+
+   GetOptions(
+      'Direct|D'  => \$opt_direct,
+      'reverse|r' => \$opt_reverse,
+      );
+
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   LOOP_ON_DOMAIN:
+   LOOP_ON_DOMAINSET:
    for my $domainset_current (keys %{$computer_db}) {
+      last LOOP_ON_DOMAINSET if $opt_direct;    # No DDT to DNS check
       next if $domainset_current eq 'dset';
       next if $domainset_current eq 'pool';
       next if $domainset_current eq 'pxe';
@@ -2644,7 +2657,10 @@ sub cmd_check_dns {
       }
 
    LOOP_ON_DNS:
-   for my $dns ('legi.grenoble-inp.fr', 'hmg.priv') {
+   my @dns_domain_list = map $computer_db->{'dset'}{$_}{'dns_extension'}, 
+      grep exists($computer_db->{'dset'}{$_}{'dns_extension'}), keys $computer_db->{'dset'};
+   for my $dns (@dns_domain_list) {
+      last LOOP_ON_DNS if not $opt_reverse;     # No DNS to DDT check
       LOOP_ON_IP:
       for (shell_command("host -t A -l $dns")) {
          # smtp2.legi.grenoble-inp.fr has address 194.254.67.37
