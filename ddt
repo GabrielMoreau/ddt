@@ -2612,51 +2612,52 @@ sub cmd_check_dns {
    my ($opt_direct, $opt_reverse);
 
    GetOptions(
-      'Direct|D'  => \$opt_direct,
+      'direct|d'  => \$opt_direct,
       'reverse|r' => \$opt_reverse,
       );
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   LOOP_ON_DOMAINSET:
-   for my $domainset_current (keys %{$computer_db}) {
-      last LOOP_ON_DOMAINSET if $opt_direct;    # No DDT to DNS check
-      next if $domainset_current eq 'dset';
-      next if $domainset_current eq 'pool';
-      next if $domainset_current eq 'pxe';
-      next if $domainset_current eq 'tag';
-      next if $domainset_current eq 'version';
+   if ($opt_direct or not $opt_reverse) { # DDT to DNS check
+      LOOP_ON_DOMAINSET:
+      for my $domainset_current (keys %{$computer_db}) {
+         next if $domainset_current eq 'dset';
+         next if $domainset_current eq 'pool';
+         next if $domainset_current eq 'pxe';
+         next if $domainset_current eq 'tag';
+         next if $domainset_current eq 'version';
 
-      my @domainsetdb = @{$computer_db->{$domainset_current}};
+         my @domainsetdb = @{$computer_db->{$domainset_current}};
 
-      LOOP_ON_COMPUTER:
-      for my $computer (@domainsetdb) {
-         my ($mac_address, $attribute) = %{$computer};
-         #my $new_mac = normalize_mac_address($mac_address);
-         my $ip = $attribute->{'ip'};
-         next LOOP_ON_COMPUTER if not $ip =~ m/$DDT::RE::IPv4_ADDRESS/xms;
-         next LOOP_ON_COMPUTER if $attribute->{'enabled'} eq 'no';
+         LOOP_ON_COMPUTER:
+         for my $computer (@domainsetdb) {
+            my ($mac_address, $attribute) = %{$computer};
+            #my $new_mac = normalize_mac_address($mac_address);
+            my $ip = $attribute->{'ip'};
+            next LOOP_ON_COMPUTER if not $ip =~ m/$DDT::RE::IPv4_ADDRESS/xms;
+            next LOOP_ON_COMPUTER if $attribute->{'enabled'} eq 'no';
 
-         my $dns_hostname_fq = scalar gethostbyaddr(inet_aton($ip), AF_INET);
-         my ($dns_hostname) = split /\./, $dns_hostname_fq;
+            my $dns_hostname_fq = scalar gethostbyaddr(inet_aton($ip), AF_INET);
+            my ($dns_hostname) = split /\./, $dns_hostname_fq;
 
-         if ($attribute->{'hostname'} ne $dns_hostname) {
-            print "$mac_address ($domainset_current) $ip - $dns_hostname / $attribute->{'hostname'} # $attribute->{'comment'}\n";
-            next LOOP_ON_COMPUTER;
-            }
-
-         my $packed_ip = scalar gethostbyname($dns_hostname_fq);
-         if (defined $packed_ip) {
-            my $ip_address = inet_ntoa($packed_ip);
-            if ($ip ne $ip_address) {
-               print "reverse DNS error for $dns_hostname_fq / $ip\n";
+            if ($attribute->{'hostname'} ne $dns_hostname) {
+               print "$mac_address ($domainset_current) $ip - $dns_hostname / $attribute->{'hostname'} # $attribute->{'comment'}\n";
                next LOOP_ON_COMPUTER;
+               }
+
+            my $packed_ip = scalar gethostbyname($dns_hostname_fq);
+            if (defined $packed_ip) {
+               my $ip_address = inet_ntoa($packed_ip);
+               if ($ip ne $ip_address) {
+                  print "Error: bad IP for reverse DNS on $dns_hostname_fq / $ip\n";
+                  next LOOP_ON_COMPUTER;
+                  }
                }
             }
          }
       }
 
-   if ($opt_reverse) {  # No DNS to DDT check
+   if ($opt_reverse) {  # DNS to DDT check
       my %saw; # count for unique member
       my @dns_domain_list = sort grep !$saw{$_}++,
          map $computer_db->{'dset'}{$_}{'dns_extension'},
@@ -3148,7 +3149,7 @@ ddt - management of computer names and IP addresses
  ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
  ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
- ddt check-dns [--Direct] [--reverse]
+ ddt check-dns [--direct] [--reverse]
  ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
@@ -3242,7 +3243,7 @@ ddt - management of computer names and IP addresses
  ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
  ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
- ddt check-dns [--Direct] [--reverse]
+ ddt check-dns [--direct] [--reverse]
  ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
@@ -3331,7 +3332,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 check-dns
 
- ddt check-dns [--Direct] [--reverse]
+ ddt check-dns [--direct] [--reverse]
 
 =head2 create-domainset
 
