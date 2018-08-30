@@ -15,8 +15,8 @@ _ddt() {
          COMPREPLY=($(compgen -W "${showlist}" -- "$cur"))
          return 0
          ;;
-      -d|--domainset)
-         local showlist=$(ddt show-domainset --no-header|awk '{print $1}')
+      -s|--sector)
+         local showlist=$(ddt show-sector --no-header|awk '{print $1}')
          COMPREPLY=($(compgen -W "${showlist}" -- "$cur"))
          return 0
          ;;
