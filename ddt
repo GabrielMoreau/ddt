@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.10.3');
+use version; our $VERSION = version->declare('0.10.4');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2489,6 +2489,15 @@ sub cmd_generate_dhcp_file {
 #Description: génère les fichiers d'enregistrements DNS
 
 sub cmd_generate_dns_file {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($verbose);
+
+   GetOptions(
+      'verbose|v' => \$verbose,
+      );
+
    my $buffer_fwd;
    my $buffer_rev;
    my $pool_domain;
@@ -2571,10 +2580,10 @@ sub cmd_generate_dns_file {
             print FILE_REVERSE_DNS $buffer_rev;
             print FILE_FORWARD_DNS $buffer_fwd;
             }
-         print "- DNS: db.$domainset_current.fwd db.$domainset_current.rev [CREATE].\n";
-         print "Ex : sort -k 4n -t . /usr/local/dhcp-dns-tools/dns/dns.hmg.priv\n";
          close FILE_REVERSE_DNS;
          close FILE_FORWARD_DNS;
+         print "- DNS: db.$domainset_current.fwd db.$domainset_current.rev [CREATE].\n" if $verbose;
+         print "  Ex : sort -k 4n -t . $FOLDER_GEN_DNS/db.$domainset_current.fwd\n"     if $verbose;
          }
       }
    }
@@ -3133,7 +3142,7 @@ ddt - management of computer names and IP addresses
  ddt enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
  ddt enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
  ddt gen-dhcp-file
- ddt gen-dns-file
+ ddt gen-dns-file [--verbose]
  ddt help
  ddt load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
@@ -3227,7 +3236,7 @@ ddt - management of computer names and IP addresses
  ddt enable-pc [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
  ddt enable-pxe [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--bootp|-b pxe_config]
  ddt gen-dhcp-file
- ddt gen-dns-file
+ ddt gen-dns-file [--verbose]
  ddt help
  ddt load-database [--domainset|-d domainset] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
@@ -3358,7 +3367,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 gen-dns-file
 
- ddt gen-dns-file
+ ddt gen-dns-file [--verbose]
 
 =head2 help
 
