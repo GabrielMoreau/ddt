@@ -3144,7 +3144,7 @@ ddt - management of computer names and IP addresses
  ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
  ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
- ddt check-dns
+ ddt check-dns [--Direct] [--reverse]
  ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
@@ -3238,7 +3238,7 @@ ddt - management of computer names and IP addresses
  ddt change-ip [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip]
  ddt change-mac [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--domainset|-d domainset] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
- ddt check-dns
+ ddt check-dns [--Direct] [--reverse]
  ddt create-domainset [--domainset|-d domainset] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--domainset|-d domainset] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
@@ -3327,7 +3327,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 check-dns
 
- ddt check-dns
+ ddt check-dns [--Direct] [--reverse]
 
 =head2 create-domainset
 
