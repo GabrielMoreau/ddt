@@ -2673,7 +2673,7 @@ sub cmd_check_dns {
             my ($hostname_fq, $ip) = ($1, $2);
             control_syntax_ip($ip) or next LOOP_ON_IP;
             if (control_exist_ip($computer_db, $ip) == 1) {
-               printf "Unkown IP: %15s / %s\n", $ip, $hostname_fq;
+               printf "Unkown IP: %-15s / %s\n", $ip, $hostname_fq;
                next LOOP_ON_IP;
                }
             }
