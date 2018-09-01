@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.0');
+use version; our $VERSION = version->declare('0.11.1');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -543,7 +543,7 @@ sub cmd_add_alias {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'alias|a=s'       => \$alias,
       );
 
@@ -567,7 +567,7 @@ sub cmd_add_dhcp {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
@@ -595,7 +595,7 @@ sub cmd_add_float {
 
    GetOptions(
       'pool|p=s'        => \$pool,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
       );
@@ -621,7 +621,7 @@ sub cmd_add_static {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
@@ -650,7 +650,7 @@ sub cmd_add_virtual {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'comment|c=s'     => \$comment,
       );
@@ -840,7 +840,7 @@ sub cmd_change_mac {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       );
@@ -866,7 +866,7 @@ sub cmd_change_ip {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       );
 
@@ -889,7 +889,7 @@ sub cmd_change_host {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       );
 
@@ -911,7 +911,7 @@ sub cmd_change_comment {
    my ($sector, $mac, $comment);
 
    GetOptions(
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
       );
@@ -956,7 +956,7 @@ sub cmd_change_sector {
    my ($sector, $ip, $mac);
 
    GetOptions(
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       );
@@ -1013,7 +1013,7 @@ sub cmd_change_tag {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       'tag|t=s'         => \$tags,
@@ -1333,7 +1333,7 @@ sub cmd_enable_pc {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       );
 
@@ -1360,7 +1360,7 @@ sub cmd_disable_pc {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       );
 
@@ -1532,7 +1532,7 @@ sub cmd_del_pc {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       );
 
@@ -1581,7 +1581,7 @@ sub cmd_create_sector {
    my ($sector, $dns_extension, $comment);
 
    GetOptions(
-      'sector|d=s'      => \$sector,
+      'sector|s|d=s'      => \$sector,
       'dns-extension|e=s'  => \$dns_extension,
       'comment|c=s'        => \$comment,
       );
@@ -1630,7 +1630,7 @@ sub cmd_create_pool {
 
    GetOptions(
       'pool|p=s'           => \$pool,
-      'sector|d=s'      => \$sector,
+      'sector|s|d=s'      => \$sector,
       'file-pool|f=s'      => \$file_pool,
       'ipaddress-pool|i=s' => \$ipaddress_pool,
       );
@@ -1833,7 +1833,7 @@ sub cmd_enable_pxe {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       'bootp|b=s'       => \$pxe_config,
       );
@@ -1913,7 +1913,7 @@ sub cmd_disable_pxe {
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'ip|i=s'          => \$ip,
       );
 
@@ -2856,7 +2856,7 @@ sub cmd_load_database {
    my ($sector, $input_file, $type_file);
 
    GetOptions(
-      'sector|d=s'   => \$sector,
+      'sector|s|d=s'    => \$sector,
       'filename|f=s'    => \$input_file,
       'kind|k=s'        => \$type_file,
       );
