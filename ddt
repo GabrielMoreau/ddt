@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.1');
+use version; our $VERSION = version->declare('0.11.2');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -3138,34 +3138,34 @@ sub cmd_help {
    print <<END;
 ddt - management of computer names and IP addresses
 
- ddt add-alias [--hostname|-h hostname] [--sector|-s sector] [--alias|-a alias]
- ddt add-dhcp [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- ddt add-float [--pool|-p pool] [--sector|-s sector] [--mac|-m mac] [--comment|-c comment]
- ddt add-static [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- ddt add-virtual [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--comment|-c comment]
- ddt change-comment [--sector|-s sector] [--mac|-m mac] [--comment|-c comment]
- ddt change-sector [--sector|-s sector] [--ip|-i ip] [--mac|-m mac]
- ddt change-host [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt change-ip [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt change-mac [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac]
- ddt change-tag [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
+ ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
+ ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt change-sector [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
+ ddt change-host [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
+ ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
  ddt check-dns [--direct] [--reverse]
- ddt create-sector [--sector|-s sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
- ddt create-pool [--pool|-p pool] [--sector|-s sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
  ddt create-tag [--tag|-t tag] [--comment|-c comment]
  ddt del-float [--pool|-p pool] [--mac|-m mac]
- ddt del-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt disable-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt del-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt disable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt disable-float [--pool|-p pool] [--mac|-m mac]
- ddt disable-pxe [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt disable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt enable-float [--pool|-p pool] [--mac|-m mac]
- ddt enable-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt enable-pxe [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt enable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
  ddt gen-dhcp-file
  ddt gen-dns-file [--verbose]
  ddt help
- ddt load-database [--sector|-s sector] [--filename|-f filename] [--kind|-k kind]
+ ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
  ddt search-mac [--mac|-m mac]
@@ -3232,34 +3232,34 @@ ddt - management of computer names and IP addresses
 
 =head1 USAGE
 
- ddt add-alias [--hostname|-h hostname] [--sector|-s sector] [--alias|-a alias]
- ddt add-dhcp [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- ddt add-float [--pool|-p pool] [--sector|-s sector] [--mac|-m mac] [--comment|-c comment]
- ddt add-static [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
- ddt add-virtual [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--comment|-c comment]
- ddt change-comment [--sector|-s sector] [--mac|-m mac] [--comment|-c comment]
- ddt change-sector [--sector|-s sector] [--ip|-i ip] [--mac|-m mac]
- ddt change-host [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt change-ip [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt change-mac [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac]
- ddt change-tag [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
+ ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
+ ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt change-sector [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
+ ddt change-host [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
+ ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
  ddt check-dns [--direct] [--reverse]
- ddt create-sector [--sector|-s sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
- ddt create-pool [--pool|-p pool] [--sector|-s sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
  ddt create-tag [--tag|-t tag] [--comment|-c comment]
  ddt del-float [--pool|-p pool] [--mac|-m mac]
- ddt del-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt disable-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt del-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt disable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt disable-float [--pool|-p pool] [--mac|-m mac]
- ddt disable-pxe [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt disable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt enable-float [--pool|-p pool] [--mac|-m mac]
- ddt enable-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
- ddt enable-pxe [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt enable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
+ ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
  ddt gen-dhcp-file
  ddt gen-dns-file [--verbose]
  ddt help
- ddt load-database [--sector|-s sector] [--filename|-f filename] [--kind|-k kind]
+ ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
  ddt search-mac [--mac|-m mac]
@@ -3288,47 +3288,47 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 add-alias
 
- ddt add-alias [--hostname|-h hostname] [--sector|-s sector] [--alias|-a alias]
+ ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
 
 =head2 add-dhcp
 
- ddt add-dhcp [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
 
 =head2 add-float
 
- ddt add-float [--pool|-p pool] [--sector|-s sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
 
 =head2 add-static
 
- ddt add-static [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
 
 =head2 add-virtual
 
- ddt add-virtual [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--comment|-c comment]
+ ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
 
 =head2 change-comment
 
- ddt change-comment [--sector|-s sector] [--mac|-m mac] [--comment|-c comment]
+ ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
 
 =head2 change-sector
 
- ddt change-sector [--sector|-s sector] [--ip|-i ip] [--mac|-m mac]
+ ddt change-sector [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
 
 =head2 change-host
 
- ddt change-host [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt change-host [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
 
 =head2 change-ip
 
- ddt change-ip [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
 
 =head2 change-mac
 
- ddt change-mac [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac]
+ ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
 
 =head2 change-tag
 
- ddt change-tag [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
 
 =head2 check-dns
 
@@ -3336,11 +3336,11 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 create-sector
 
- ddt create-sector [--sector|-s sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
+ ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
 
 =head2 create-pool
 
- ddt create-pool [--pool|-p pool] [--sector|-s sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
+ ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
 
 =head2 create-pxe
 
@@ -3356,11 +3356,11 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 del-pc
 
- ddt del-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt del-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
 
 =head2 disable-pc
 
- ddt disable-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt disable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
 
 =head2 disable-float
 
@@ -3368,7 +3368,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 disable-pxe
 
- ddt disable-pxe [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt disable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
 
 =head2 enable-float
 
@@ -3376,11 +3376,11 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 enable-pc
 
- ddt enable-pc [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip]
+ ddt enable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
 
 =head2 enable-pxe
 
- ddt enable-pxe [--hostname|-h hostname] [--sector|-s sector] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
 
 =head2 gen-dhcp-file
 
@@ -3396,7 +3396,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 load-database
 
- ddt load-database [--sector|-s sector] [--filename|-f filename] [--kind|-k kind]
+ ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
 
 =head2 remove-pxe
 
