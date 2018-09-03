@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.2');
+use version; our $VERSION = version->declare('0.11.3');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -472,7 +472,7 @@ sub add_static {
 #-------------------------------------------------------------------------------
 #Nom: add_dhcp
 #Description: section à corriger pour prendre en compte l'ajout d'une machine dans un pool dhcp
-#--- usage: ddt add_dhcp -d legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
+#--- usage: ddt add-dhcp -s legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
 
 sub add_dhcp {
    my ($computer_db, $hostname, $sector, $ip, $mac, $comment) = @_;
@@ -504,7 +504,7 @@ sub add_dhcp {
    }
 
 #-------------------------------------------------------------------------------
-#--- usage: ddt add_float -d legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
+#--- usage: ddt add-float -s legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
 
 sub add_float {
    my ($computer_db, $pool, $sector, $mac, $comment) = @_;
@@ -699,8 +699,8 @@ sub cmd_add_virtual {
 #Nom: change_mac
 #Description: change la mac adresse d'une machine en saisissant soit l'ip
 #             soit le nom de la mahcine et spécifiant le domaine
-#--- usage: ddt change_mac -d legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66
-#--- usage: ddt change_mac -d legi-sector03 -i 194.254.66.187 -m 00:18:F3:03:6F:66
+#--- usage: ddt change-mac -s legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66
+#--- usage: ddt change-mac -s legi-sector03 -i 194.254.66.187 -m 00:18:F3:03:6F:66
 
 sub change_mac {
    my ($hostname, $sector, $ip, $mac) = @_;
@@ -2895,73 +2895,72 @@ sub exit_on_error_option {
 
    if ($command eq 'add-dhcp') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory). Example: -d legi-sector03\n";
+      print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -h : computer hostname (mandatory if option -i != 'pool'). Example: -h info8pc154\n";
       print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A\n";
       print " -i : internet IP address (mandatory). Possible value: classical IP address or the keyword 'pool'\n";
       print " -p : name of the DHCP pool to which the machine belongs (mandatory if option -i == 'pool')\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " ddt add_dhcp -h most1mc130 -d legi-661 -i 194.254.66.130 -m 00:17:F2:D3:2B:FF -c '2008-07-03 Mac Book Guillaume Balleyrac (MOST)\n";
-      print " ddt add_dhcp -p pool-stagiaire -i pool -d hmg.priv -m 02:00:54:55:4E:01 -c '2008-09-02 Portable Perso - Laanaia Nabil - Achim Wirth (MEIGE)\n";
+      print " ddt add-dhcp -h most1mc130 -s legi-sector03 -i 194.254.66.130 -m 00:17:F2:D3:2B:FF -c '2008-07-03 Mac Book Guillaume Balleyrac (MOST)\n";
       }
 
    elsif ($command eq 'add-float') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory)\n";
+      print " -s : sector attachment (mandatory)\n";
       print " -p : name of the DHCP pool to which the machine belongs (mandatory)\n";
       print " -m : physical MAC address (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " ddt add_float -p pool-stagiaire -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add-float -p pool-stagiaire -s legi-pool -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-static') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory)\n";
+      print " -s : sector attachment (mandatory)\n";
       print " -i : internet IP address (mandatory)\n";
       print " -h : computer hostname (mandatory)\n";
       print " -m : physical MAC address (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " ddt add_static -h legipc1 -d hmg.priv -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add-static -h legipc1 -s legi-sector03 -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-virtual') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory)\n";
+      print " -s : sector attachment (mandatory)\n";
       print " -i : internet IP address (mandatory)\n";
       print " -h : computer hostname (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " ddt add_virtual -h legipc1 -d legi-211 -i 192.168.10.1 -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add-virtual -h legipc1 -s legi-sector03 -i 192.168.10.1 -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-alias') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory)\n";
+      print " -s : sector attachment (mandatory)\n";
       print " -h : computer hostname (mandatory)\n";
       print " -a : computer alias name (mandatory)\n";
       }
 
    elsif ($command eq 'create-sector') {
       print "List of options for command: $command\n";
-      print " -d : new sector (mandatory)\n";
+      print " -s : new sector (mandatory)\n";
       print " -e : DNS domain name extension( mandatory). Example legi.grenoble-inp.fr\n";
       print " -c : comment (mandatory). Example: 2016-08-22 VLAN legi-261 (INFO)\n";
       print "Examples:\n";
-      print " ddt create_sector -d legi-264 -e legi.grenoble-inp.fr -c '2016-08-22 VLAN legi-261 (INFO)'\n";
+      print " ddt create-sector -s legi-sector03 -e legi.grenoble-inp.fr -c '2016-08-22 VLAN legi-261 (INFO)'\n";
       }
 
    elsif ($command eq 'create-pool') {
       print "List of options for command: $command\n";
       print " -p : name of the DHCP pool. Example: pool-legi-priv\n";
-      print " -d : sector attachment for the pool. (sector attachment must exist in file $COMPUTER_BASENAME.conf). Example: legi.grenoble-inp.fr\n";
+      print " -s : sector attachment for the pool. (sector attachment must exist in file $COMPUTER_BASENAME.conf). Example: legi-sector03\n";
       print " -f : configuration filename on the DHCP server for the pool\n";
       print " -i : adresse(s) IP ou plage d'IP. Séparateur d'adresses IP: ','. Séparateur de plage '-'\n";
       print "Examples:\n";
-      print " ddt -p pool-hmg -d hmg.priv -f pool.hmg.priv -i 192.168.10.1,192.168.10.2,192.168.10.3\n";
-      print " ddt -p turbocavit -d legi-sector03 -f pool-legi-public -i 192.168.10.1-192.168.10.4\n";
+      print " ddt create-pool -p legi-pool1 -s legi-sector03 -f legi-pool-private -i 192.168.10.1,192.168.10.2,192.168.10.3\n";
+      print " ddt create-pool -p legi-pool2 -s legi-sector03 -f legi-pool-public  -i 192.168.10.1-192.168.10.4\n";
       }
 
    elsif ($command eq 'create-pxe') {
@@ -2981,7 +2980,7 @@ sub exit_on_error_option {
       print "List of options for command: $command\n";
       print " -h : computer hostname (mandatory unless option -i)\n";
       print " -i : internet IP address (mandatory unless option -h)\n";
-      print " -d : sector attachment (mandatory if option -h)\n";
+      print " -s : sector attachment (mandatory if option -h)\n";
       print " -b : name of the PXE/BOOTP configuration. Example: most\n";
       }
 
@@ -2989,7 +2988,7 @@ sub exit_on_error_option {
       print "List of options for command: $command\n";
       print " -h : computer hostname (mandatory unless option -i)\n";
       print " -i : internet IP address (mandatory unless option -h)\n";
-      print " -d : sector attachment (mandatory if option -h)\n";
+      print " -s : sector attachment (mandatory if option -h)\n";
       }
 
    elsif ($command eq 'create-tag') {
@@ -3006,7 +3005,7 @@ sub exit_on_error_option {
 
    elsif ($command eq 'change-mac') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory). Example: -d legi-sector03\n";
+      print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -h : computer hostname (mandatory unless option -i)\n";
       print " -i : internet IP address (mandatory unless option -h). Possible value: classical IP address or the keyword 'pool'\n";
       print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
@@ -3014,14 +3013,14 @@ sub exit_on_error_option {
 
    elsif ($command eq 'change-ip') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory). Example: -d legi-sector03\n";
+      print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -h : computer hostname (mandatory)\n";
       print " -i : new internet IP address (mandatory). Possible value: classical IP address\n";
       }
 
    elsif ($command eq 'change-host') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory). Example: -d legi-sector03\n";
+      print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -i : internet IP address (mandatory). Possible value: classical IP address\n";
       print " -h : new computer hostname (mandatory)\n";
       print "It's not possible to change hostname for computer that belongs to a pool\n";
@@ -3029,14 +3028,14 @@ sub exit_on_error_option {
 
    elsif ($command eq 'change-comment') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory). Example: -d legi-sector03\n";
+      print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
       print " -c : new comment (mandatory)\n";
       }
 
    elsif ($command eq 'change-sector') {
       print "List of options for command: $command\n";
-      print " -d : new sector attachment (mandatory). Example: -d legi-661\n";
+      print " -s : new sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
       print " -i : internet IP address (mandatory)\n";
       }
@@ -3044,7 +3043,7 @@ sub exit_on_error_option {
    elsif ($command eq 'change-tag') {
       print "List of options for command: $command\n";
       print " -h : computer hostname (mandatory unless option -i or -m)\n";
-      print " -d : sector attachment (mandatory). Example: -d legi-sector03\n";
+      print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
       print " -i : internet IP address (mandatory unless option -h or -m)\n";
       print " -m : physical MAC address (mandatory unless option -h or -i, priority). Example: -m 0F:58:AB:2A:22:11\n";
       print " -t : list of tags separated by comma (mandatory). Example: -t internal,windows\n";
@@ -3052,7 +3051,7 @@ sub exit_on_error_option {
 
    elsif ($command eq 'load-database') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment\n";
+      print " -s : sector attachment\n";
       print " -f : input file in DHCP format\n";
       print " -k : possible cases (kind): dhcp, pool-dhcp, fix-address\n";
       }
@@ -3061,10 +3060,10 @@ sub exit_on_error_option {
       print "List of options for command: $command\n";
       print " -h : computer hostname (mandatory unless option -i)\n";
       print " -i : internet IP address (mandatory unless option -h)\n";
-      print " -d : sector attachment (mandatory if option -h)\n";
+      print " -s : sector attachment (mandatory if option -h)\n";
       print "Examples:\n";
-      print " ddt enable_pc -i 192.168.10.1\n";
-      print " ddt enable_pc -d hmg.priv -h kevinpc\n";
+      print " ddt enable-pc -i 192.168.10.1\n";
+      print " ddt enable-pc -s legi-sector03 -h kevinpc\n";
       }
 
    elsif ($command eq 'enable-float') {
@@ -3083,15 +3082,15 @@ sub exit_on_error_option {
       print "List of options for command: $command\n";
       print " -h : computer hostname (mandatory unless option -i)\n";
       print " -i : internet IP address (mandatory unless option -h)\n";
-      print " -d : sector attachment (mandatory if option -h)\n";
+      print " -s : sector attachment (mandatory if option -h)\n";
       print "Examples:\n";
-      print " ddt disable_pc -i 192.168.10.1\n";
-      print " ddt disable_pc -d hmg.priv -h kevinpc\n";
+      print " ddt disable-pc -i 192.168.10.1\n";
+      print " ddt disable-pc -s legi-sector03 -h kevinpc\n";
       }
 
    elsif ($command eq 'del-pc') {
       print "List of options for command: $command\n";
-      print " -d : sector attachment (mandatory)\n";
+      print " -s : sector attachment (mandatory)\n";
       print " -h : computer hostname (mandatory unless option -i)\n";
       print " -i : internet IP address (mandatory unless option -h)\n";
       }
