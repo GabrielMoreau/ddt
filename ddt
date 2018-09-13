@@ -3,7 +3,7 @@
 # Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 # License GNU GPL version 2 or later and Perl equivalent
 #
-# apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl libtext-table-perl
+# apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl libtext-table-perl libnetaddr-ip-perl
 
 package DDT::RE;
 
@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.3');
+use version; our $VERSION = version->declare('0.11.4');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -30,6 +30,7 @@ use File::Touch;
 use File::Copy;
 use Socket;
 use Text::Table;
+use NetAddr::IP;
 
 my $command = shift @ARGV || 'help';
 
@@ -260,6 +261,24 @@ sub control_exist_ip {
    return 1;
    }
 
+#-------------------------------------------------------------------------------
+
+sub control_ip_in_range {
+   my ($computer_db, $sector, $ip) = @_;
+
+   return 1 if not exists $computer_db->{'dset'}{$sector}{'ip'}; # No IP range defined for this sector
+
+   my $ip_addr = NetAddr::IP->new($ip);
+
+   LOOP_ON_IP_RANGE:
+   for my $ip_range_current (@{$computer_db->{'dset'}{$sector}{'ip'}}) {
+      my $range = NetAddr::IP->new($ip_range_current);
+      return 1 if $range->contains($ip_addr);
+      }
+
+   return 0;
+   }
+
 #-------------------------------------------------------------------------------------
 #Nom: control_syntaxe_mac
 #Description: controle la syntaxe d'une adresse MAC (juste la longueur pas les valeurs)
@@ -486,6 +505,7 @@ sub add_dhcp {
    control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    control_syntax_ip($ip)                             or exit;
    control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in sector $sector: $ip.\n";
+   control_ip_in_range($computer_db, $sector, $ip)    or die "Error: IP $ip is not in sector $sector IP range.\n";
    control_syntax_comment($comment)                   or exit;
 
    push @{$computer_db->{$sector}}, { $mac => {
