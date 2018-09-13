@@ -266,12 +266,12 @@ sub control_exist_ip {
 sub control_ip_in_range {
    my ($computer_db, $sector, $ip) = @_;
 
-   return 1 if not exists $computer_db->{'dset'}{$sector}{'ip'}; # No IP range defined for this sector
+   return 1 if not exists $computer_db->{'dset'}{$sector}{'ip_range'}; # No IP range defined for this sector
 
    my $ip_addr = NetAddr::IP->new($ip);
 
    LOOP_ON_IP_RANGE:
-   for my $ip_range_current (@{$computer_db->{'dset'}{$sector}{'ip'}}) {
+   for my $ip_range_current (@{$computer_db->{'dset'}{$sector}{'ip_range'}}) {
       my $range = NetAddr::IP->new($ip_range_current);
       return 1 if $range->contains($ip_addr);
       }
