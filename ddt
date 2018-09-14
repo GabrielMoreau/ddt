@@ -2685,16 +2685,17 @@ sub cmd_check_dns {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($opt_direct, $opt_reverse);
+   my ($opt_direct, $opt_reverse, $opt_byip);
 
    GetOptions(
       'direct|d'  => \$opt_direct,
       'reverse|r' => \$opt_reverse,
+      'by-ip|b'   => \$opt_byip,
       );
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   if ($opt_direct or not $opt_reverse) { # DDT to DNS check
+   if ($opt_direct or not ($opt_reverse or $opt_byip)) { # DDT to DNS check
       LOOP_ON_SECTOR:
       for my $sector_current (keys %{$computer_db}) {
          next if $sector_current eq 'dset';
@@ -2751,6 +2752,23 @@ sub cmd_check_dns {
             if (control_exist_ip($computer_db, $ip) == 1) {
                printf "Unkown IP: %-15s / %s\n", $ip, $hostname_fq;
                next LOOP_ON_IP;
+               }
+            }
+         }
+      }
+
+   if ($opt_byip) {  # IP Range DDT check
+      my @ip_check;
+      LOOP_ON_SECTOR:
+      for my $sector_current (@{$computer_db->{'dset'}}) {
+         next LOOP_ON_SECTOR if not exists $computer_db->{'dset'}{'ip_range'};
+
+         LOOP_ON_CIDR:
+         for my $ip_range (@{$computer_db->{'dset'}{'ip_range'}}) {
+
+            LOOP_ON_IP:
+            for my $ip (NetAddr::IP->new($ip_range)->hostenum()) {
+               print "$ip\n";
                }
             }
          }
