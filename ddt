@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.7');
+use version; our $VERSION = version->declare('0.11.8');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1620,6 +1620,9 @@ sub cmd_create_sector {
       if $sector        eq ''
       or $dns_extension eq ''
       or $comment       eq '';
+
+   $sector =~ m{^[\w\d]}            or die "Error: sector $sector must begin by a letter or a digit\n";
+   $sector =~ m{^[\w\d][\w\d-_]*$}  or die "Error: sector $sector must only use letter digit dash and underscore character\n";
 
    $comment = normalize_comment($comment);
 
