@@ -1667,16 +1667,16 @@ sub cmd_sector_add_ip {
    exists $computer_db->{'dset'}{$sector} or die "Error: sector not exists: $sector\n";
 
    my $timestamp = time;
-   $computer_db->{'dset'}{$sector}{'ip-range'} ||= [];
+   $computer_db->{'dset'}{$sector}{'ip_range'} ||= [];
    LOOP_ON_CIDR:
-   for my $cidr_current (@{$computer_db->{'dset'}{$sector}{'ip-range'}}) {
+   for my $cidr_current (@{$computer_db->{'dset'}{$sector}{'ip_range'}}) {
       next LOOP_ON_CIDR if $cidr_current ne $ip_range;
       
       die "Error: IP range $ip_range already in sector $sector\n";
       }
 
    my $timestamp = time;
-   push @{$computer_db->{'dset'}{$sector}{'ip-range'}}, $ip_range;
+   push @{$computer_db->{'dset'}{$sector}{'ip_range'}}, $ip_range;
    $computer_db->{'dset'}{$sector}{'modify_time'} = $timestamp;
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -2250,7 +2250,7 @@ sub cmd_show_sector {
       my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
 
       my $ip_range;
-      $ip_range = join ',', @{$computer_db->{'dset'}{$sector_current}{'ip-range'}} if exists $computer_db->{'dset'}{$sector_current}{'ip-range'};
+      $ip_range = join ',', @{$computer_db->{'dset'}{$sector_current}{'ip_range'}} if exists $computer_db->{'dset'}{$sector_current}{'ip_range'};
 
       my $category;
       my $comment = $computer_db->{'dset'}{$sector_current}{'comment'};
@@ -2768,6 +2768,7 @@ sub cmd_check_dns {
 
             LOOP_ON_IP:
             for my $ip (NetAddr::IP->new($ip_range)->hostenum()) {
+               $ip =~ s{/32$}{};
                print "$ip\n";
                
                my $dns_hostname_fq = scalar gethostbyaddr(inet_aton($ip), AF_INET);
@@ -2785,7 +2786,7 @@ sub cmd_check_dns {
 
                # Verify direct return same host
                LOOP_ON_COMPUTER:
-               for my $computer (@{$computer_db->{$sector_current}) {
+               for my $computer (@{$computer_db->{$sector_current}}) {
                   my ($mac_address, $attribute) = %{$computer};
 
                   next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
@@ -2797,7 +2798,7 @@ sub cmd_check_dns {
                   }
 
                # Declare in DNS but not in DDT
-               print "Error: DNS host $dns_hostname with IP $ip not declare in DDT database\n" if $dns_hostname ne '';
+               print "Error: DNS host $dns_hostname in sector $sector_current with IP $ip not declare in DDT database\n" if $dns_hostname ne '';
                # Normally never arrive here
 
                #if ($computer_db->{$sector_current}{}$attribute->{'hostname'} ne $dns_hostname) {
