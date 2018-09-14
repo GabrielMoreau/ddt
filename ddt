@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.5');
+use version; our $VERSION = version->declare('0.11.6');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -320,9 +320,9 @@ sub control_syntax_ip {
 sub control_syntax_cidr {
    my $cidr = shift;
 
-   return 1 if $cidr !~ m{^(\d+\.){3}\d+/\d+$};
-   return 1 if not NetAddr::IP->new($cidr);
-   return 0;
+   return 0 if $cidr !~ m{^(\d+\.){3}\d+/\d+$};
+   return 0 if not NetAddr::IP->new($cidr);
+   return 1;
    }
 
 #-------------------------------------------------------------------------------------
@@ -1668,7 +1668,7 @@ sub cmd_sector_add_ip {
    exists $computer_db->{'dset'}{$sector} or die "Error: sector not exists: $sector\n";
 
    my $timestamp = time;
-   $computer_db->{'dset'}{$sector}{'ip-range'} |= [];
+   $computer_db->{'dset'}{$sector}{'ip-range'} ||= [];
    LOOP_ON_CIDR:
    for my $cidr_current (@{$computer_db->{'dset'}{$sector}{'ip-range'}}) {
       next LOOP_ON_CIDR if $cidr_current ne $ip_range;
