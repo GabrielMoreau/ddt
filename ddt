@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.8');
+use version; our $VERSION = version->declare('0.11.9');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2769,7 +2769,6 @@ sub cmd_check_dns {
             LOOP_ON_IP:
             for my $ip (NetAddr::IP->new($ip_range)->hostenum()) {
                $ip =~ s{/32$}{};
-               print "$ip\n";
                
                my $dns_hostname_fq = scalar gethostbyaddr(inet_aton($ip), AF_INET);
                my ($dns_hostname) = split /\./, $dns_hostname_fq;
@@ -2779,32 +2778,25 @@ sub cmd_check_dns {
                if (defined $packed_ip) {
                   my $ip_address = inet_ntoa($packed_ip);
                   if ($ip ne $ip_address) {
-                     print "Error: bad IP $ip for reverse DNS on $dns_hostname_fq\n";
-                     #next LOOP_ON_IP;
+                     print "Error: bad IP $ip for reverse DNS on $dns_hostname_fq sector $sector_current\n";
                      }
                   }
 
-               # Verify direct return same host
+               # Verify direct return same hostname
                LOOP_ON_COMPUTER:
                for my $computer (@{$computer_db->{$sector_current}}) {
                   my ($mac_address, $attribute) = %{$computer};
 
                   next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
 
-                  next LOOP_ON_IP if $attribute->{'hostname'} eq $dns_hostname;
-                  
-                  print "Error: DNS bad host $dns_hostname for IP $ip\n";
+                  print "Error: bad DNS host $dns_hostname / DDT host $attribute->{'hostname'} in sector $sector_current with IP $ip\n"
+                     if $attribute->{'hostname'} ne $dns_hostname;
+
                   next LOOP_ON_IP;
                   }
 
                # Declare in DNS but not in DDT
                print "Error: DNS host $dns_hostname in sector $sector_current with IP $ip not declare in DDT database\n" if $dns_hostname ne '';
-               # Normally never arrive here
-
-               #if ($computer_db->{$sector_current}{}$attribute->{'hostname'} ne $dns_hostname) {
-               #   print "$mac_address ($sector_current) $ip - $dns_hostname / $attribute->{'hostname'} # $attribute->{'comment'}\n";
-               #   next LOOP_ON_IP;
-               #   }
                }
             }
          }
