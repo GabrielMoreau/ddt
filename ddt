@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.6');
+use version; our $VERSION = version->declare('0.11.7');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2228,6 +2228,7 @@ sub cmd_show_sector {
      {is_sep => 1,        body        => '  '},
      {align  => 'left',   align_title => 'left',   title => 'DNS-Extension:'},
      {is_sep => 1,        body        => '  '},
+     {align  => 'left',   align_title => 'left',   title => 'IP-Range'},
      {align  => 'left',   align_title => 'left',   title => 'Date'},
      {align  => 'left',   align_title => 'left',   title => 'Comment'},
      {align  => 'left',   align_title => 'left',   title => 'Category'},
@@ -2248,6 +2249,9 @@ sub cmd_show_sector {
       $mon++;
       my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
 
+      my $ip_range;
+      $ip_range = join ',', @{$computer_db->{'dset'}{$sector_current}{'ip-range'}} if exists $computer_db->{'dset'}{$sector_current}{'ip-range'};
+
       my $category;
       my $comment = $computer_db->{'dset'}{$sector_current}{'comment'};
       $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
@@ -2255,6 +2259,7 @@ sub cmd_show_sector {
 
       $tb_computer->add($sector_current,
          $computer_db->{'dset'}{$sector_current}{'dns_extension'},
+         $ip_range,
          $date,
          $comment,
          $category,
