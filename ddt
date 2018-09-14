@@ -304,14 +304,10 @@ sub control_syntax_mac_address {
 sub control_syntax_ip {
    my $ip = shift;
 
-   if ($ip ne 'pool') {
-      my @ip_split = split /\./, $ip;
+   return 1 if $ip ne 'pool';
 
-      if ( scalar(@ip_split) != 4 ) {
-         print {*STDERR} "Error: bad IP syntax: $ip\n";
-         return 0;
-         }
-      }
+   return 0 if $ip !~ m{^(\d+\.){3}\d+$};
+   return 0 if not NetAddr::IP->new("$ip/32");
    return 1;
    }
 
@@ -479,7 +475,7 @@ sub add_static {
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
    control_syntax_mac_address($mac)                         or exit;
    control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
-   control_syntax_ip($ip)                                   or exit;
+   control_syntax_ip($ip)                                   or die "Error: bad IP syntax $ip\n";
    control_exist_ip($computer_db, $ip)                      or die "Error: IP $ip address already exist in sector $sector\n";
    control_ip_in_range($computer_db, $sector, $ip)          or die "Error: IP $ip is not in sector $sector IP range.\n";
    control_syntax_comment($comment)                         or exit;
@@ -515,7 +511,7 @@ sub add_dhcp {
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
    control_syntax_mac_address($mac)                         or exit;
    control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
-   control_syntax_ip($ip)                                   or exit;
+   control_syntax_ip($ip)                                   or die "Error: bad IP syntax $ip\n";
    control_exist_ip($computer_db, $ip)                      or die "Error: IP address already exist in sector $sector: $ip.\n";
    control_ip_in_range($computer_db, $sector, $ip)          or die "Error: IP $ip is not in sector $sector IP range.\n";
    control_syntax_comment($comment)                         or exit;
@@ -701,7 +697,7 @@ sub cmd_add_virtual {
 
    control_exist_sector($computer_db, $sector)              or exit;
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_ip($ip)                                   or exit;
+   control_syntax_ip($ip)                                   or die "Error: bad IP syntax $ip\n";
    control_exist_ip($computer_db, $ip)                      or die "Error: IP address already exist in sector $sector: $ip.\n";
    control_ip_in_range($computer_db, $sector, $ip)          or die "Error: IP $ip is not in sector $sector IP range.\n";
    control_syntax_comment($comment)                         or exit;
@@ -745,7 +741,7 @@ sub change_mac {
    control_syntax_mac_address($mac)                   or exit;
    control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    if ($ip ne '') {
-      control_syntax_ip($ip) or exit;
+      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          print "Error: unkown IP address: $ip\n";
          exit;
@@ -804,7 +800,7 @@ sub change_ip {
    if ( control_exist_hostname($computer_db, $sector, $hostname) == 1 ) {
       die "Error: unkown host: $hostname, in sector: $sector\n";
       }
-   control_syntax_ip($ip)                          or exit;
+   control_syntax_ip($ip)                          or die "Error: bad IP syntax $ip\n";
    control_exist_ip($computer_db, $ip)             or die "Error: IP $ip address already exist in sector $sector\n";
    control_ip_in_range($computer_db, $sector, $ip) or die "Error: IP $ip is not in sector $sector IP range.\n";
 
@@ -839,7 +835,7 @@ sub change_host {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    control_exist_sector($computer_db, $sector) or exit;
-   control_syntax_ip($ip)   or exit;
+   control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";
    if ( control_exist_ip($computer_db, $ip) == 1 ) {
       die "Error: unkown IP address: $ip\n";
       }
@@ -1004,9 +1000,9 @@ sub cmd_change_sector {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   control_exist_sector($computer_db, $sector)   or exit;
-   control_syntax_ip($ip)                             or exit;
-   control_syntax_mac_address($mac)                   or exit;
+   control_exist_sector($computer_db, $sector)  or exit;
+   control_syntax_ip($ip)                       or die "Error: bad IP syntax $ip\n";
+   control_syntax_mac_address($mac)             or exit;
 
    LOOP_ON_SECTOR:
    for my $sector_current (keys %{$computer_db}) {
@@ -1113,7 +1109,7 @@ sub disable_pc {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    if ($ip ne '') { # disable by IP
-      control_syntax_ip($ip);
+      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";;
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          die "Error: unkown IP address: $ip [FAILED]\n";
          }
@@ -1241,7 +1237,7 @@ sub enable_pc {
    control_exist_sector($computer_db, $sector) or exit;
 
    if ($ip ne '') { # enable by IP
-      control_syntax_ip($ip);
+      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";;
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          print "Error: unkown IP address: $ip\n";
          exit;
@@ -1724,6 +1720,7 @@ sub cmd_create_pool {
    my @ip_list = ();
    #---control if address exist ---#
    if ($ipaddress_pool =~ /,/) {
+      LOOP_ON_IP:
       for my $ip (split /,/, $ipaddress_pool) {
          if ($ip =~ /-/) {
             my ($ip1, $ip2, $ip3, $range) = split /\./, $ip;
@@ -1736,7 +1733,7 @@ sub cmd_create_pool {
                }
             }
          else {
-            control_syntax_ip($ip) or next;
+            control_syntax_ip($ip) or next LOOP_ON_IP;
             if ( control_exist_ip($computer_db, $ip) == 0 ) {
                print "L'adresse IP $ip existe déjà\n";
                next;
@@ -1926,7 +1923,7 @@ sub cmd_enable_pxe {
 
    control_exist_sector($computer_db, $sector) or exit;
    if ($ip ne '') {
-      control_syntax_ip($ip);
+      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";;
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          die "Error: unkown IP address: $ip\n";
          }
@@ -2002,7 +1999,7 @@ sub cmd_disable_pxe {
 
    control_exist_sector($computer_db, $sector) or exit;
    if ($ip ne '') {
-      control_syntax_ip($ip);
+      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";;
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          die "Error: unkown IP address: $ip\n";
          }
@@ -2776,6 +2773,7 @@ sub load_data_dhcp {
    my @buffer = <FILE>;
    close(FILE);
 
+   LINE:
    for my $ligne (@buffer) {
       #--
       $ligne =~ s/#.*$//;
@@ -2816,18 +2814,18 @@ sub load_data_dhcp {
 
          if ( control_exist_hostname($computer_db, $sector, $hostname) == 0 ) {
             print "Error: host already exist in sector $sector: $hostname\n";
-            next;
+            next LINE;
             }
-         control_syntax_mac_address($mac) or next;
+         control_syntax_mac_address($mac) or next LINE;
          if ( control_exist_mac($computer_db, $mac) == 0) {
             print "Error: physical MAC address already exists: $mac\n";
-            next;
+            next LINE;
             }
 
-         control_syntax_ip($ip) or next;
+         control_syntax_ip($ip) or next LINE;
          if ( control_exist_ip($computer_db, $ip) == 0 ) {
             print "Error: IP address already exists: $ip\n";
-            next;
+            next LINE;
             }
          my $timestamp = time;
          push @{$computer_db->{$sector}}, { $mac => {
