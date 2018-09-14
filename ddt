@@ -2226,7 +2226,7 @@ sub cmd_show_sector {
    my $tb_computer = Text::Table->new(
      {align  => 'left',   align_title => 'left',   title => 'Sector'},
      {is_sep => 1,        body        => '  '},
-     {align  => 'left',   align_title => 'left',   title => 'DNS-Extension:'},
+     {align  => 'left',   align_title => 'left',   title => 'DNS-Extension'},
      {is_sep => 1,        body        => '  '},
      {align  => 'left',   align_title => 'left',   title => 'IP-Range'},
      {align  => 'left',   align_title => 'left',   title => 'Date'},
