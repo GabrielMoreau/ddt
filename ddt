@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.4');
+use version; our $VERSION = version->declare('0.11.5');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -66,6 +66,7 @@ my %cmd_db = (
    'remove-pxe'         => \&cmd_remove_pxe,
    'remove-tag'         => \&cmd_remove_tag,
    'search-mac'         => \&cmd_search_mac,
+   'sector-add-ip'      => \&cmd_sector_add_ip,
    'show'               => \&cmd_show_host,
    'show-sector'        => \&cmd_show_sector,
    'show-pool'          => \&cmd_show_pool,
@@ -466,11 +467,12 @@ sub add_static {
    $mac = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_mac_address($mac)                   or exit;
-   control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
-   control_syntax_ip($ip)                             or exit;
-   control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in sector $sector: $ip\n";
-   control_syntax_comment($comment)                   or exit;
+   control_syntax_mac_address($mac)                         or exit;
+   control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
+   control_syntax_ip($ip)                                   or exit;
+   control_exist_ip($computer_db, $ip)                      or die "Error: IP $ip address already exist in sector $sector\n";
+   control_ip_in_range($computer_db, $sector, $ip)          or die "Error: IP $ip is not in sector $sector IP range.\n";
+   control_syntax_comment($comment)                         or exit;
    my $timestamp = time;
    push @{$computer_db->{$sector}}, { $mac => {
       'hostname'     => $hostname,
@@ -499,14 +501,14 @@ sub add_dhcp {
    my $timestamp = time;
    $mac = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
-   control_exist_sector($computer_db, $sector)  or exit;
+   control_exist_sector($computer_db, $sector)              or exit;
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_mac_address($mac)                   or exit;
-   control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
-   control_syntax_ip($ip)                             or exit;
-   control_exist_ip($computer_db, $ip)                or die "Error: IP address already exist in sector $sector: $ip.\n";
-   control_ip_in_range($computer_db, $sector, $ip)    or die "Error: IP $ip is not in sector $sector IP range.\n";
-   control_syntax_comment($comment)                   or exit;
+   control_syntax_mac_address($mac)                         or exit;
+   control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
+   control_syntax_ip($ip)                                   or exit;
+   control_exist_ip($computer_db, $ip)                      or die "Error: IP address already exist in sector $sector: $ip.\n";
+   control_ip_in_range($computer_db, $sector, $ip)          or die "Error: IP $ip is not in sector $sector IP range.\n";
+   control_syntax_comment($comment)                         or exit;
 
    push @{$computer_db->{$sector}}, { $mac => {
       'hostname'     => $hostname,
@@ -687,11 +689,12 @@ sub cmd_add_virtual {
    $comment = normalize_comment($comment);
    my $timestamp = time;
 
-   control_exist_sector($computer_db, $sector)           or exit;
+   control_exist_sector($computer_db, $sector)              or exit;
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_ip($ip)                                      or exit;
-   control_exist_ip($computer_db, $ip)                         or die "Error: IP address already exist in sector $sector: $ip.\n";
-   control_syntax_comment($comment)                            or exit;
+   control_syntax_ip($ip)                                   or exit;
+   control_exist_ip($computer_db, $ip)                      or die "Error: IP address already exist in sector $sector: $ip.\n";
+   control_ip_in_range($computer_db, $sector, $ip)          or die "Error: IP $ip is not in sector $sector IP range.\n";
+   control_syntax_comment($comment)                         or exit;
 
    my $mac = join ':', 'FF', 'FF', map({sprintf("%02X", $_)} split(/\./, $ip));
    control_syntax_mac_address($mac)             or exit;
@@ -791,8 +794,9 @@ sub change_ip {
    if ( control_exist_hostname($computer_db, $sector, $hostname) == 1 ) {
       die "Error: unkown host: $hostname, in sector: $sector\n";
       }
-   control_syntax_ip($ip) or exit;
-   control_exist_ip($computer_db, $ip) or die "Error: IP address already exist in sector $sector: $ip\n";
+   control_syntax_ip($ip)                          or exit;
+   control_exist_ip($computer_db, $ip)             or die "Error: IP $ip address already exist in sector $sector\n";
+   control_ip_in_range($computer_db, $sector, $ip) or die "Error: IP $ip is not in sector $sector IP range.\n";
 
    my @sectordb = @{$computer_db->{$sector}};
 
@@ -1601,7 +1605,7 @@ sub cmd_create_sector {
    my ($sector, $dns_extension, $comment);
 
    GetOptions(
-      'sector|s|d=s'      => \$sector,
+      'sector|s|d=s'       => \$sector,
       'dns-extension|e=s'  => \$dns_extension,
       'comment|c=s'        => \$comment,
       );
