@@ -317,6 +317,16 @@ sub control_syntax_ip {
 
 #-------------------------------------------------------------------------------------
 
+sub control_syntax_cidr {
+   my $cidr = shift;
+
+   return 1 if $cidr !~ m{^(\d+\.){3}\d+/\d+$};
+   return 1 if not NetAddr::IP->new($cidr);
+   return 0;
+   }
+
+#-------------------------------------------------------------------------------------
+
 sub control_syntax_comment {
    my $comment = shift;
 
@@ -1611,7 +1621,7 @@ sub cmd_create_sector {
       );
 
    exit_on_error_option($help)
-      if $sector     eq ''
+      if $sector        eq ''
       or $dns_extension eq ''
       or $comment       eq '';
 
@@ -1632,6 +1642,43 @@ sub cmd_create_sector {
       'modify_time'     => $timestamp,
       };
    $computer_db->{$sector} ||= []; # Create empty sector computer list by default
+   ipamdb_save("$COMPUTER_YAML", $computer_db);
+   }
+
+#-------------------------------------------------------------------------------
+
+sub cmd_sector_add_ip {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($sector, $ip_range);
+
+   GetOptions(
+      'sector|s|d=s' => \$sector,
+      'ip-range|i=s' => \$ip_range,
+      );
+
+   exit_on_error_option($help)
+      if $sector     eq ''
+      or $ip_range   eq '';
+
+   control_syntax_cidr($ip_range)   or die "Error: bad IP range $ip_range syntax (CIDR)\n";;
+
+   my $computer_db = ipamdb_load($COMPUTER_YAML);
+   exists $computer_db->{'dset'}{$sector} or die "Error: sector not exists: $sector\n";
+
+   my $timestamp = time;
+   $computer_db->{'dset'}{$sector}{'ip-range'} |= [];
+   LOOP_ON_CIDR:
+   for my $cidr_current (@{$computer_db->{'dset'}{$sector}{'ip-range'}}) {
+      next LOOP_ON_CIDR if $cidr_current ne $ip_range;
+      
+      die "Error: IP range $ip_range already in sector $sector\n";
+      }
+
+   my $timestamp = time;
+   push @{$computer_db->{'dset'}{$sector}{'ip-range'}}, $ip_range;
+   $computer_db->{'dset'}{$sector}{'modify_time'} = $timestamp;
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
 
@@ -3130,6 +3177,12 @@ sub exit_on_error_option {
       print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
       }
 
+   elsif ($command eq 'sector-add-ip') {
+      print "List of options for command: $command\n";
+      print " -s : sector attachment (mandatory)\n";
+      print " -i : internet IP range address in CIDR notation (mandatory)\n";
+      }
+
    else {
       print "No help for command: $command\n";
       }
@@ -3192,6 +3245,7 @@ ddt - management of computer names and IP addresses
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
  ddt search-mac [--mac|-m mac]
+ ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
  ddt show-pool [--no-header|-H]
@@ -3201,43 +3255,44 @@ ddt - management of computer names and IP addresses
 
 COMMANDS
 
- * add-alias        : add an alias for a computer (like CNAME for the DNS)
- * add-dhcp         : add a computer with a fix DHCP IP or in a DHCP pool
- * add-float        : add a computer with an IP in a DHCP pool
- * add-static       : add a computer with a static IP
- * add-virtual      : add a virtual computer with a static IP but a virtual MAC (useful to declare float computer in DNS)
- * change-comment   : change the computer comment
- * change-sector : change the sector attachment for a computer
- * change-host      : change the computer hostname
- * change-ip        : change the computer IP address
- * change-mac       : change the computer physical MAC address
- * change-tag       : change the list of TAGs associated to a computer
- * check-dns        : check the DNS table for base IPs
- * create-sector : create a new sector
- * create-pool      : create a new pool for DHCP records
- * create-pxe       : create a new PXE/BOOTP configuration
- * create-tag       : create a new TAG
- * del-float        : remove a computer from a DHCP pool
- * del-pc           : remove a computer (DHCP or static IP) from the YAML database
- * disable-pc       : disable a computer (DHCP and/or DNS) (but keep it in the database)
- * disable-float    : disable a computer from a DHCP pool (but keep it in the database)
- * disable-pxe      : remove PXE/BOOTP configuration on a computer
- * enable-float     : enable a previous disable computer (DHCP and/or DNS)
- * enable-pc        : enable a previous disable computer (DHCP and/or DNS)
- * enable-pxe       : enable PXE/BOOTP configuration on a computer
- * gen-dhcp-file    : generate DHCP files for the isc DHCP server
- * gen-dns-file     : generate DNS files for the bind domain server
- * help             : this help
- * load-database    : load the YAML database (be careful)
- * remove-pxe       : remove a PXE/BOOTP configuration
- * remove-tag       : remove a TAG
- * search-mac       : search physical MAC address computer
- * show-sector   : list all sector group of computer
- * show             : list all computers
- * show-pool        : list all pool
- * show-pxe         : list PXE/BOOTP configuration
- * show-tag         : list all TAGs
- * version          : return program version
+ * add-alias         : add an alias for a computer (like CNAME for the DNS)
+ * add-dhcp          : add a computer with a fix DHCP IP or in a DHCP pool
+ * add-float         : add a computer with an IP in a DHCP pool
+ * add-static        : add a computer with a static IP
+ * add-virtual       : add a virtual computer with a static IP but a virtual MAC (useful to declare float computer in DNS)
+ * change-comment    : change the computer comment
+ * change-sector     : change the sector attachment for a computer
+ * change-host       : change the computer hostname
+ * change-ip         : change the computer IP address
+ * change-mac        : change the computer physical MAC address
+ * change-tag        : change the list of TAGs associated to a computer
+ * check-dns         : check the DNS table for base IPs
+ * create-sector     : create a new sector
+ * create-pool       : create a new pool for DHCP records
+ * create-pxe        : create a new PXE/BOOTP configuration
+ * create-tag        : create a new TAG
+ * del-float         : remove a computer from a DHCP pool
+ * del-pc            : remove a computer (DHCP or static IP) from the YAML database
+ * disable-pc        : disable a computer (DHCP and/or DNS) (but keep it in the database)
+ * disable-float     : disable a computer from a DHCP pool (but keep it in the database)
+ * disable-pxe       : remove PXE/BOOTP configuration on a computer
+ * enable-float      : enable a previous disable computer (DHCP and/or DNS)
+ * enable-pc         : enable a previous disable computer (DHCP and/or DNS)
+ * enable-pxe        : enable PXE/BOOTP configuration on a computer
+ * gen-dhcp-file     : generate DHCP files for the isc DHCP server
+ * gen-dns-file      : generate DNS files for the bind domain server
+ * help              : this help
+ * load-database     : load the YAML database (be careful)
+ * remove-pxe        : remove a PXE/BOOTP configuration
+ * remove-tag        : remove a TAG
+ * search-mac        : search physical MAC address computer
+ * ddt sector-add-ip : add IP range check on a sector
+ * show-sector       : list all sector group of computer
+ * show              : list all computers
+ * show-pool         : list all pool
+ * show-pxe          : list PXE/BOOTP configuration
+ * show-tag          : list all TAGs
+ * version           : return program version
 END
    return;
    }
@@ -3286,6 +3341,7 @@ ddt - management of computer names and IP addresses
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
  ddt search-mac [--mac|-m mac]
+ ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
  ddt show-pool [--no-header|-H]
@@ -3432,6 +3488,10 @@ and entries could be added, deleted, or modified by the command line.
 =head2 search-mac
 
  ddt search-mac [--mac|-m mac]
+
+=head2 sector-add-ip
+
+ ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
 
 =head2 show-sector
 
