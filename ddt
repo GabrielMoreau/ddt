@@ -2726,7 +2726,7 @@ sub cmd_check_dns {
             if (defined $packed_ip) {
                my $ip_address = inet_ntoa($packed_ip);
                if ($ip ne $ip_address) {
-                  print "Error: bad IP for reverse DNS on $dns_hostname_fq / $ip\n";
+                  print "Error: bad IP $ip for reverse DNS on $dns_hostname_fq\n";
                   next LOOP_ON_COMPUTER;
                   }
                }
@@ -2760,15 +2760,50 @@ sub cmd_check_dns {
    if ($opt_byip) {  # IP Range DDT check
       my @ip_check;
       LOOP_ON_SECTOR:
-      for my $sector_current (@{$computer_db->{'dset'}}) {
-         next LOOP_ON_SECTOR if not exists $computer_db->{'dset'}{'ip_range'};
+      for my $sector_current (keys %{$computer_db->{'dset'}}) {
+         next LOOP_ON_SECTOR if not exists $computer_db->{'dset'}{$sector_current}{'ip_range'};
 
          LOOP_ON_CIDR:
-         for my $ip_range (@{$computer_db->{'dset'}{'ip_range'}}) {
+         for my $ip_range (@{$computer_db->{'dset'}{$sector_current}{'ip_range'}}) {
 
             LOOP_ON_IP:
             for my $ip (NetAddr::IP->new($ip_range)->hostenum()) {
                print "$ip\n";
+               
+               my $dns_hostname_fq = scalar gethostbyaddr(inet_aton($ip), AF_INET);
+               my ($dns_hostname) = split /\./, $dns_hostname_fq;
+
+               # Verify reverse return same IP
+               my $packed_ip = scalar gethostbyname($dns_hostname_fq);
+               if (defined $packed_ip) {
+                  my $ip_address = inet_ntoa($packed_ip);
+                  if ($ip ne $ip_address) {
+                     print "Error: bad IP $ip for reverse DNS on $dns_hostname_fq\n";
+                     #next LOOP_ON_IP;
+                     }
+                  }
+
+               # Verify direct return same host
+               LOOP_ON_COMPUTER:
+               for my $computer (@{$computer_db->{$sector_current}) {
+                  my ($mac_address, $attribute) = %{$computer};
+
+                  next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
+
+                  next LOOP_ON_IP if $attribute->{'hostname'} eq $dns_hostname;
+                  
+                  print "Error: DNS bad host $dns_hostname for IP $ip\n";
+                  next LOOP_ON_IP;
+                  }
+
+               # Declare in DNS but not in DDT
+               print "Error: DNS host $dns_hostname with IP $ip not declare in DDT database\n" if $dns_hostname ne '';
+               # Normally never arrive here
+
+               #if ($computer_db->{$sector_current}{}$attribute->{'hostname'} ne $dns_hostname) {
+               #   print "$mac_address ($sector_current) $ip - $dns_hostname / $attribute->{'hostname'} # $attribute->{'comment'}\n";
+               #   next LOOP_ON_IP;
+               #   }
                }
             }
          }
