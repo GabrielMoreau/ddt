@@ -2790,7 +2790,7 @@ sub cmd_check_dns {
                   next LOOP_ON_COMPUTER if $attribute->{'ip'} ne $ip;
 
                   print "Error: bad DNS host $dns_hostname / DDT host $attribute->{'hostname'} in sector $sector_current with IP $ip\n"
-                     if $attribute->{'hostname'} ne $dns_hostname;
+                     if $attribute->{'hostname'} ne $dns_hostname and $attribute->{'enabled'} ne 'no';
 
                   next LOOP_ON_IP;
                   }
