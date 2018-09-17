@@ -490,7 +490,7 @@ sub add_static {
       'create_time'  => $timestamp,
       'modify_time'  => $timestamp,
       'comment'      => $comment,
-      'alias'        =>  '',
+      'alias'        => '',
       }};
    print "Info: add the host: $hostname, IP: $ip, MAC: $mac, sector: $sector [OK]\n";
 
@@ -717,7 +717,7 @@ sub cmd_add_virtual {
       'create_time'  => $timestamp,
       'modify_time'  => $timestamp,
       'comment'      => $comment,
-      'alias'        =>  '',
+      'alias'        => '',
       }};
    print "Add the virtual computer: $hostname, IP: $ip, sector: $sector\n";
 
@@ -2938,7 +2938,7 @@ sub load_data_dhcp {
             'enabled'      => 'yes',
             'create_time'  => $timestamp,
             'modify_time'  => $timestamp,
-            'alias'        =>  '',
+            'alias'        => '',
             }};
          }
       }
