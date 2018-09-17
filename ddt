@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.11.9');
+use version; our $VERSION = version->declare('0.12.0');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1065,12 +1065,12 @@ sub cmd_change_tag {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    if ($tags !~ m/^ (?:\w+,)* \w+ $/xms) {
-      die "Error: bad format for tags (comma separated list): $tags\n";
+      die "Error: bad format for tags (comma separated list): $tags [FAILED]\n";
       }
 
    for my $tag (split/,/, $tags) {
       next if $tag eq 'universal';
-      die "Error: TAG doesn't exist in the database. Create it before with create_tag: $tag\n" if not exists $computer_db->{'tag'}{$tag};
+      die "Error: TAG $tag doesn't exist in the database. Create $tag with command create_tag [FAILED]\n" if not exists $computer_db->{'tag'}{$tag};
       }
 
    control_exist_sector($computer_db, $sector) or exit;
@@ -1090,10 +1090,10 @@ sub cmd_change_tag {
 
       delete $attribute->{'tag'} if $tags eq 'universal';
       ipamdb_save("$COMPUTER_YAML", $computer_db);
+      print "Info: update host $hostname sector $sector tags $tags [OK]\n";
       exit;
       }
-   print "Mise à jour du commentaire de la machine [FAILED]\n";
-   print "L'adresse MAC: $mac n'existe pas dans le domaine: $sector.\n";
+   die "Error: no host $hostname in sector $sector has MAC $mac [FAILED]\n";
    }
 
 #--------------------------------------------------------------------------------
@@ -1134,12 +1134,13 @@ sub cmd_change_type {
 
       next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
-      die "Warning: host $hostname already of type $type\n" if $attribute->{'address_type'} eq $type;
+      die "Warning: host $hostname already of type $type [FAILED]\n" if $attribute->{'address_type'} eq $type;
 
       $attribute->{'address_type'}  = $type;
       $attribute->{'modify_time'}   = time;
 
       ipamdb_save("$COMPUTER_YAML", $computer_db);
+      print "Info: update host $hostname sector $sector type $type [OK]\n";
       exit;
       }
    die "Error: change host $hostname type [FAILED]\n";
