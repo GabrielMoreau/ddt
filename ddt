@@ -46,6 +46,7 @@ my %cmd_db = (
    'change-ip'          => \&cmd_change_ip,
    'change-mac'         => \&cmd_change_mac,
    'change-tag'         => \&cmd_change_tag,
+   'change-type'        => \&cmd_change_type,
    'check-dns'          => \&cmd_check_dns,
    'create-sector'      => \&cmd_create_sector,
    'create-pool'        => \&cmd_create_pool,
@@ -1052,7 +1053,7 @@ sub cmd_change_tag {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
 
    exit_on_error_option($help)
-      if $sector  eq ''
+      if $sector     eq ''
       or $tags       eq '';
    exit_on_error_option($help)
       if $mac        eq ''
@@ -1093,6 +1094,56 @@ sub cmd_change_tag {
       }
    print "Mise à jour du commentaire de la machine [FAILED]\n";
    print "L'adresse MAC: $mac n'existe pas dans le domaine: $sector.\n";
+   }
+
+#--------------------------------------------------------------------------------
+
+sub cmd_change_type {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($hostname, $sector, $type);
+
+   GetOptions(
+      'hostname|h=s'    => \$hostname,
+      'sector|s|d=s'    => \$sector,
+      'type|t=s'        => \$type,
+      );
+
+   ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
+
+   exit_on_error_option($help)
+      if $sector     eq ''
+      and $hostname  eq ''
+      and $type      eq '';
+
+   my $computer_db = ipamdb_load($COMPUTER_YAML);
+
+   if ($type !~ m/^ (dhcp|float|static|virtual) $/xms) {
+      die "Error: bad type: $type\n";
+      }
+
+   $type =~ s/^float$/pool-dhcp/;
+   # No type virtual actually. See and write exactly type name and their property
+
+   control_exist_sector($computer_db, $sector) or exit;
+
+   $mac = get_mac_from_hostname($computer_db, $sector, $hostname, $mac);
+   control_syntax_mac_address($mac) or exit;
+
+   LOOP_ON_COMPUTER:
+   for my $computer (@{$computer_db->{$sector}}) {
+      my ($mac_address, $attribute) = %{$computer};
+
+      next LOOP_ON_COMPUTER if $mac_address ne $mac;
+
+      $attribute->{'address_type'}  = $type;
+      $attribute->{'modify_time'}   = time;
+
+      ipamdb_save("$COMPUTER_YAML", $computer_db);
+      exit;
+      }
+   print "Error: change host $hostname type [FAILED]\n";
    }
 
 #-------------------------------------------------------------------------------
@@ -3172,6 +3223,13 @@ sub exit_on_error_option {
       print " -t : list of tags separated by comma (mandatory). Example: -t internal,windows\n";
       }
 
+   elsif ($command eq 'change-type') {
+      print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory)\n";
+      print " -s : sector attachment (mandatory)\n";
+      print " -t : new type). Example: -t static\n";
+      }
+
    elsif ($command eq 'load-database') {
       print "List of options for command: $command\n";
       print " -s : sector attachment\n";
@@ -3277,6 +3335,7 @@ ddt - management of computer names and IP addresses
  ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt change-type [--hostname|-h hostname] [--sector|-s|-d sector] [--type|-t type]
  ddt check-dns [--direct] [--reverse]
  ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
@@ -3318,6 +3377,7 @@ COMMANDS
  * change-ip         : change the computer IP address
  * change-mac        : change the computer physical MAC address
  * change-tag        : change the list of TAGs associated to a computer
+ * change-type       : change the type associated to a computer
  * check-dns         : check the DNS table for base IPs
  * create-sector     : create a new sector
  * create-pool       : create a new pool for DHCP records
@@ -3373,6 +3433,7 @@ ddt - management of computer names and IP addresses
  ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+ ddt change-type [--hostname|-h hostname] [--sector|-s|-d sector] [--type|-t type]
  ddt check-dns [--direct] [--reverse]
  ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
@@ -3460,6 +3521,10 @@ and entries could be added, deleted, or modified by the command line.
 =head2 change-tag
 
  ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
+
+=head2 change-type
+
+ ddt change-type [--hostname|-h hostname] [--sector|-s|-d sector] [--type|-t type]
 
 =head2 check-dns
 
