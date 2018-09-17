@@ -1128,14 +1128,13 @@ sub cmd_change_type {
 
    control_exist_sector($computer_db, $sector) or exit;
 
-   $mac = get_mac_from_hostname($computer_db, $sector, $hostname, $mac);
-   control_syntax_mac_address($mac) or exit;
-
    LOOP_ON_COMPUTER:
    for my $computer (@{$computer_db->{$sector}}) {
       my ($mac_address, $attribute) = %{$computer};
 
-      next LOOP_ON_COMPUTER if $mac_address ne $mac;
+      next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
+
+      die "Warning: host $hostname already of type $type\n" if $attribute->{'address_type'} eq $type;
 
       $attribute->{'address_type'}  = $type;
       $attribute->{'modify_time'}   = time;
@@ -1143,7 +1142,7 @@ sub cmd_change_type {
       ipamdb_save("$COMPUTER_YAML", $computer_db);
       exit;
       }
-   print "Error: change host $hostname type [FAILED]\n";
+   die "Error: change host $hostname type [FAILED]\n";
    }
 
 #-------------------------------------------------------------------------------
