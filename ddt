@@ -440,6 +440,7 @@ sub get_computer_from_mac {
 #-------------------------------------------------------------------------------
 #Nom: add_alias
 #Description: ajoute un alias pour une machine. Pour la fonctionnalité CNAME dans le DNS.
+# Seems not finish and not functional !
 
 sub add_alias {
    my ($computer_db, $hostname, $sector, $alias) = @_;
@@ -579,7 +580,7 @@ sub cmd_add_alias {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $alias      eq '';
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
@@ -605,7 +606,7 @@ sub cmd_add_dhcp {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $ip         eq ''
       or $mac        eq ''
       or $comment    eq '';
@@ -632,7 +633,7 @@ sub cmd_add_float {
    ($pool, $sector) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
       if $pool       eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $mac        eq ''
       or $comment    eq '';
 
@@ -641,6 +642,7 @@ sub cmd_add_float {
    }
 
 #-------------------------------------------------------------------------------
+# No DHCP computer, just an entry A in DNS with a real MAC
 
 sub cmd_add_static {
    local @ARGV = @_;
@@ -659,7 +661,7 @@ sub cmd_add_static {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $ip         eq ''
       or $mac        eq ''
       or $comment    eq '';
@@ -687,7 +689,7 @@ sub cmd_add_virtual {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $ip         eq ''
       or $comment    eq '';
 
@@ -704,8 +706,8 @@ sub cmd_add_virtual {
    control_syntax_comment($comment)                         or exit;
 
    my $mac = join ':', 'FF', 'FF', map({sprintf("%02X", $_)} split(/\./, $ip));
-   control_syntax_mac_address($mac)             or exit;
-   control_exist_mac($computer_db, $mac)         or die "Error: virtual physical MAC address already exists: $mac\n";
+   control_syntax_mac_address($mac)       or exit;
+   control_exist_mac($computer_db, $mac)  or die "Error: virtual physical MAC address already exists: $mac\n";
 
    push @{$computer_db->{$sector}}, { $mac => {
       'hostname'     => $hostname,
@@ -715,6 +717,7 @@ sub cmd_add_virtual {
       'create_time'  => $timestamp,
       'modify_time'  => $timestamp,
       'comment'      => $comment,
+      'alias'        =>  '',
       }};
    print "Add the virtual computer: $hostname, IP: $ip, sector: $sector\n";
 
@@ -904,7 +907,7 @@ sub cmd_change_ip {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $ip         eq '';
 
    change_ip($hostname, $sector, $ip);
@@ -927,7 +930,7 @@ sub cmd_change_host {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $sector  eq ''
+      or $sector     eq ''
       or $ip         eq '';
 
    change_host($hostname, $sector, $ip);
@@ -1119,7 +1122,7 @@ sub cmd_change_type {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   if ($type !~ m/^ (dhcp|float|static|virtual) $/xms) {
+   if ($type !~ m/^ (dhcp|float|static) $/xms) {
       die "Error: bad type: $type\n";
       }
 
@@ -1758,7 +1761,7 @@ sub cmd_create_pool {
 
    exit_on_error_option($help)
       if $pool             eq ''
-      or $sector        eq ''
+      or $sector           eq ''
       or $file_pool        eq ''
       or $ipaddress_pool   eq '';
 
@@ -3492,9 +3495,17 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 add-static
 
+Add a static host in the database.
+No DHCP configuration will be generated,
+only DNS.
+
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
 
 =head2 add-virtual
+
+Add a static host in the database with a virtual MAC address beginning by C<FF:FF:...>.
+No DHCP configuration will be generated,
+only DNS.
 
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
 
