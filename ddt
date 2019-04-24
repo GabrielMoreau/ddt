@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+# Copyright (C) 2006-2019, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 # License GNU GPL version 2 or later and Perl equivalent
 #
 # apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl libtext-table-perl libnetaddr-ip-perl
@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.12.0');
+use version; our $VERSION = version->declare('0.12.1');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -360,10 +360,15 @@ sub get_cmd_name {
 sub normalize_mac_address {
    my $mac_address = shift;
 
-   # D07E-28D1-7AB8 or d07e28-d17ab8
+   # D07E-28D1-7AB8 or d07e28-d17ab8 or D07E.28D1.7AB8
    if ($mac_address =~ m{^ (?: [0-9A-Fa-f]{4} -){2} [0-9A-Fa-f]{4} $}xms
       or $mac_address =~ m{^ [0-9A-Fa-f]{6} - [0-9A-Fa-f]{6} $}xms) {
       $mac_address =~ s/-//g;
+      return join q{:}, unpack('(A2)*', uc($mac_address));
+      }
+
+   if ($mac_address =~ m{^ (?: [0-9A-Fa-f]{4} \.){2} [0-9A-Fa-f]{4} $}xms) {
+      $mac_address =~ s/\.//g;
       return join q{:}, unpack('(A2)*', uc($mac_address));
       }
 
@@ -3308,7 +3313,7 @@ sub cmd_version {
 
    print <<'END';
 ddt - management of computer names and IP addresses
-Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+Copyright (C) 2006-2019, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 Main author Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
 License GNU GPL version 2 or later and Perl equivalent
 END
@@ -3655,4 +3660,4 @@ Written by Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>, Kevin Rever
 
 License GNU GPL version 2 or later and Perl equivalent
 
-Copyright (C) 2006-2018, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+Copyright (C) 2006-2019, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
