@@ -3094,7 +3094,7 @@ sub exit_on_error_option {
       print " -m : physical MAC address (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 DELL Laptop 6400 - Olivier Toto (INFO)\n";
       print "Example:\n";
-      print " ddt add-float -p pool-stagiaire -s legi-pool -i 192.168.10.1 -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
+      print " ddt add-float -p pool-stagiaire -s legi-pool -m 00:AB:1B:CC:AA:2F -c '2013-09-25 Dell OptiPlex 745 - Eric Goncalves (NRJ)\n";
       }
 
    elsif ($command eq 'add-static') {
