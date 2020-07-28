@@ -15,7 +15,7 @@ Everything is saved in a YAML database
 and entries could be added, deleted, or modified by the command line.
 
 All the command help and description is on the online manual
-[https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/ ddt]
+[ddt](https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/).
 
 ## Debian package
 
