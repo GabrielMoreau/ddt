@@ -15,12 +15,12 @@ Everything is saved in a YAML database
 and entries could be added, deleted, or modified by the command line.
 
 All the command help and description is on the online manual
-[http://servforge.legi.grenoble-inp.fr/pub/soft-trokata/ddt/ddt.html ddt]
+[https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/ ddt]
 
 ## Debian package
 
 Debian is a GNU/Linux distribution.
-Debian (and certainly Ubuntu) package for amd64 arch could be download on: http://servforge.legi.grenoble-inp.fr/pub/soft-trokata/ddt/download.
+Debian (and certainly Ubuntu) package for amd64 arch could be download on: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/download..
 
 You can then install it with
 
@@ -36,7 +36,7 @@ All code is under **free license**.
 Scripts in `bash` are under GPL version 3 or later (http://www.gnu.org/licenses/gpl.html),
 the `perl` scripts are under the same license as `perl` itself ie the double license GPL and Artistic License (http://dev.perl.org/licenses/artistic.html).
 
-All sources are available on the LEGI forge: http://servforge.legi.grenoble-inp.fr/svn/soft-trokata/trunk/ddt
+All sources are available on the campus forge: https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ddt
 
 The sources are managed via subversion (http://subversion.tigris.org/).
 It is very easy to stay synchronized with these sources
