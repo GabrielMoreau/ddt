@@ -1,0 +1,21 @@
+---
+image: debian:latest
+
+before_script:
+  - apt-get update -yqq
+  - apt-get install -yqq perl make binutils findutils tar wget
+
+pages:
+  stage: build
+  script:
+    - mkdir -p public/download
+    - $(wget --no-check-certificate ${CI_PAGES_URL}/download.tar.gz -O download.tar.gz || exit 0)
+    - '[ -s download.tar.gz ] && tar -xzf download.tar.gz public/download/'
+    - '[ -s public/download/ddt_0.9.4-1_all.deb ] || (cd public/download; wget http://servforge.legi.grenoble-inp.fr/pub/soft-trokata/ddt/download/ddt_0.9.4-1_all.deb || exit 0)'
+    - make pages
+    - tar -czf public/download.tar.gz public/download/
+  artifacts:
+    paths:
+      - public
+  only:
+    - master

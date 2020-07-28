@@ -59,7 +59,7 @@ Description: dhcp-dns-tools management of computer names and IP addresses
  but easily configurable for your site like a swiss army knife.
  Everything is saved in a YAML database
  and entries could be added, deleted, or modified by the command line.
-Homepage: http://servforge.legi.grenoble-inp.fr/projects/soft-trokata/wiki/SoftWare/DDT
+Homepage: https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ddt
 END
 
 # Control archive
