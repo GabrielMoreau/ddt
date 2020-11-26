@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.12.2');
+use version; our $VERSION = version->declare('0.12.3');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1650,6 +1650,8 @@ sub cmd_del_float {
       'pool|p=s'        => \$pool,
       'mac|m=s'         => \$mac,
       );
+
+   $mac = normalize_mac_address($mac);
 
    ($pool) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
