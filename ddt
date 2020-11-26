@@ -2744,15 +2744,18 @@ sub cmd_check_dns {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($opt_direct, $opt_reverse, $opt_byip);
+   my ($opt_direct, $opt_reverse, $opt_byip, $clean_cache);
 
    GetOptions(
-      'direct|d'  => \$opt_direct,
-      'reverse|r' => \$opt_reverse,
-      'by-ip|b'   => \$opt_byip,
+      'direct|d'      => \$opt_direct,
+      'reverse|r'     => \$opt_reverse,
+      'by-ip|b'       => \$opt_byip,
+      'clean-cache|c' => \$clean_cache,
       );
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
+
+   system qw(/usr/bin/sudo /usr/sbin/nscd -i hosts) if $clean_cache;
 
    if ($opt_direct or not ($opt_reverse or $opt_byip)) { # DDT to DNS check
       LOOP_ON_SECTOR:
