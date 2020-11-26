@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.12.3');
+use version; our $VERSION = version->declare('0.12.4');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -608,6 +608,9 @@ sub cmd_add_dhcp {
       'comment|c=s'     => \$comment,
       );
 
+   $mac     = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
+
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
@@ -634,6 +637,9 @@ sub cmd_add_float {
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
       );
+
+   $mac     = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
 
    ($pool, $sector) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
@@ -662,6 +668,9 @@ sub cmd_add_static {
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
       );
+
+   $mac     = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
 
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
@@ -883,6 +892,8 @@ sub cmd_change_mac {
       'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       );
+
+   $mac = normalize_mac_address($mac);
 
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
@@ -1479,6 +1490,8 @@ sub cmd_disable_float {
       'mac|m=s'   => \$mac,
       );
 
+   $mac = normalize_mac_address($mac);
+
    ($pool) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
       if $pool eq ''
@@ -1499,6 +1512,8 @@ sub cmd_enable_float {
       'pool|p=s'  => \$pool,
       'mac|m=s'   => \$mac,
       );
+
+   $mac = normalize_mac_address($mac);
 
    ($pool) = split /\./, $pool, 2 if $pool =~ m/\./;
    exit_on_error_option($help)
