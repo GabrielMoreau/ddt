@@ -3426,7 +3426,7 @@ COMMANDS
  * remove-pxe        : remove a PXE/BOOTP configuration
  * remove-tag        : remove a TAG
  * search-mac        : search physical MAC address computer
- * ddt sector-add-ip : add IP range check on a sector
+ * sector-add-ip     : add IP range check on a sector
  * show-sector       : list all sector group of computer
  * show              : list all computers
  * show-pool         : list all pool
