@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.12.4');
+use version; our $VERSION = version->declare('0.12.5');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2818,7 +2818,7 @@ sub cmd_check_dns {
       my @dns_domain_list = sort grep !$saw{$_}++,
          map $computer_db->{'dset'}{$_}{'dns_extension'},
          grep exists($computer_db->{'dset'}{$_}{'dns_extension'}),
-         keys $computer_db->{'dset'};
+         keys %{$computer_db->{'dset'}};
       LOOP_ON_DNS:
       for my $dns (@dns_domain_list) {
          LOOP_ON_IP:
