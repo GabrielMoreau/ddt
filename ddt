@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.13.3');
+use version; our $VERSION = version->declare('0.13.4');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -86,16 +86,16 @@ my $CONFIG;
 my $xdg_config_home = $ENV{'XDG_CONFIG_HOME'} || "$ENV{'HOME'}/.config";
 $CONFIG = config_load("$xdg_config_home/ddt/config.yml") if -e "$xdg_config_home/ddt/config.yml";
 
-my $COMPUTER_BASENAME   = $CONFIG->{'database'}{'basename'} || 'ddt';
-my $COMPUTER_EXT        = $CONFIG->{'database'}{'ext'}      || 'db';
+my $COMPUTER_BASENAME    = $CONFIG->{'database'}{'basename'}    || 'ddt';
+my $COMPUTER_EXT         = $CONFIG->{'database'}{'ext'}         || 'db';
 
-my $FOLDER_APP          = $CONFIG->{'database'}{'folder'}   || '/var/lib/ddt';
-my $FOLDER_BACKUP       = $CONFIG->{'database'}{'backup'}   || "$FOLDER_APP/backup";
-my $FOLDER_GEN_DHCP     = $CONFIG->{'generate'}{'dhcp'}     || "$FOLDER_APP/dhcp";
-my $FOLDER_GEN_DNS      = $CONFIG->{'generate'}{'dns'}      || "$FOLDER_APP/dns";
-my $FOLDER_GEN_RADIUS   = $CONFIG->{'generate'}{'radius'}   || "$FOLDER_APP/radius";
-my $SCRIPT_UPDATE       = $CONFIG->{'script'}{'update'}     || '/usr/share/ddt/update-dhcp-server';
-my $SCRIPT_RADIUS_UPDATE = $CONFIG->{'script'}{'radius-update'} || '/usr/share/ddt/update-radius-server';
+my $FOLDER_APP           = $CONFIG->{'database'}{'folder'}      || '/var/lib/ddt';
+my $FOLDER_BACKUP        = $CONFIG->{'database'}{'backup'}      || "$FOLDER_APP/backup";
+my $FOLDER_GEN_DHCP      = $CONFIG->{'generate'}{'dhcp'}        || "$FOLDER_APP/dhcp";
+my $FOLDER_GEN_DNS       = $CONFIG->{'generate'}{'dns'}         || "$FOLDER_APP/dns";
+my $FOLDER_GEN_RADIUS    = $CONFIG->{'generate'}{'radius'}      || "$FOLDER_APP/radius";
+my $SCRIPT_UPDATE_DHCP   = $CONFIG->{'script'}{'update-dhcp'}   || '/usr/share/ddt/script/update-dhcp-server';
+my $SCRIPT_UPDATE_RADIUS = $CONFIG->{'script'}{'update-radius'} || '/usr/share/ddt/script/update-radius-server';
 
 my $COMPUTER_YAML       = "$FOLDER_APP/$COMPUTER_BASENAME.$COMPUTER_EXT";
 
@@ -2638,7 +2638,7 @@ sub cmd_generate_dhcp_file {
          }
       }
       print "Copy DHCP files from $FOLDER_GEN_DHCP to /etc/dhcp/include/\n";
-      exec $SCRIPT_UPDATE;
+      exec $SCRIPT_UPDATE_DHCP if -x $SCRIPT_UPDATE_DHCP;
    }
 
 #-------------------------------------------------------------------------------
@@ -2806,7 +2806,8 @@ sub cmd_generate_radius_file {
 
                   next ALL_MAC_ADDRESS if $enabled ne 'yes';
                   
-                  my $vlan = shift shuffle(@{$computer_db->{'pool'}{$current_pool}{'vlan'}});
+                  my @vlans = shuffle @{$computer_db->{'pool'}{$current_pool}{'vlan'}});
+                  my $vlan = shift @vlans;
 
                   $buffer  = "# $hostname\n";
                   $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
@@ -2833,7 +2834,7 @@ sub cmd_generate_radius_file {
          }
       }
       print "Copy RADIUS files from $FOLDER_GEN_RADIUS to /etc/freeradius/3.0/mods-config/files/authorize\n";
-      exec $SCRIPT_RADIUS_UPDATE;
+      exec $SCRIPT_UPDATE_RADIUS if -x $SCRIPT_UPDATE_RADIUS;
    }
 
 #--------------------------------------------------------------------------------
