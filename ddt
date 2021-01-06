@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.13.1');
+use version; our $VERSION = version->declare('0.13.2');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -92,7 +92,7 @@ my $FOLDER_APP          = $CONFIG->{'database'}{'folder'}   || '/var/lib/ddt';
 my $FOLDER_BACKUP       = $CONFIG->{'database'}{'backup'}   || "$FOLDER_APP/backup";
 my $FOLDER_GEN_DHCP     = $CONFIG->{'generate'}{'dhcp'}     || "$FOLDER_APP/dhcp";
 my $FOLDER_GEN_DNS      = $CONFIG->{'generate'}{'dns'}      || "$FOLDER_APP/dns";
-my $FOLDER_GEN_DNS      = $CONFIG->{'generate'}{'radius'}   || "$FOLDER_APP/radius";
+my $FOLDER_GEN_RADIUS   = $CONFIG->{'generate'}{'radius'}   || "$FOLDER_APP/radius";
 my $SCRIPT_UPDATE       = $CONFIG->{'script'}{'update'}     || '/usr/share/ddt/update-dhcp-server';
 my $SCRIPT_RADIUS_UPDATE = $CONFIG->{'script'}{'radius-update'} || '/usr/share/ddt/update-radius-server';
 
@@ -100,10 +100,11 @@ my $COMPUTER_YAML       = "$FOLDER_APP/$COMPUTER_BASENAME.$COMPUTER_EXT";
 
 #-------------------------------------------------------------------------------
 
-mkdir $FOLDER_APP, 0755      if not -d $FOLDER_APP;
-mkdir $FOLDER_BACKUP, 0755   if not -d $FOLDER_BACKUP;
-mkdir $FOLDER_GEN_DHCP, 0755 if not -d $FOLDER_GEN_DHCP;
-mkdir $FOLDER_GEN_DNS, 0755  if not -d $FOLDER_GEN_DNS;
+mkdir $FOLDER_APP, 0755        if not -d $FOLDER_APP;
+mkdir $FOLDER_BACKUP, 0755     if not -d $FOLDER_BACKUP;
+mkdir $FOLDER_GEN_DHCP, 0755   if not -d $FOLDER_GEN_DHCP;
+mkdir $FOLDER_GEN_DNS, 0755    if not -d $FOLDER_GEN_DNS;
+mkdir $FOLDER_GEN_RADIUS, 0755 if not -d $FOLDER_GEN_RADIUS;
 
 if (defined $cmd_db{$command}) {
    $cmd_db{$command}->(@ARGV);
