@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.13.4');
+use version; our $VERSION = version->declare('0.13.5');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2007,7 +2007,7 @@ sub cmd_enable_pxe {
 
    control_exist_sector($computer_db, $sector) or exit;
    if ($ip ne '') {
-      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";;
+      control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";
       if ( control_exist_ip($computer_db, $ip) == 1 ) {
          die "Error: unkown IP address: $ip\n";
          }
@@ -2806,7 +2806,7 @@ sub cmd_generate_radius_file {
 
                   next ALL_MAC_ADDRESS if $enabled ne 'yes';
                   
-                  my @vlans = shuffle @{$computer_db->{'pool'}{$current_pool}{'vlan'}});
+                  my @vlans = shuffle @{$computer_db->{'pool'}{$current_pool}{'vlan'}};
                   my $vlan = shift @vlans;
 
                   $buffer  = "# $hostname\n";
