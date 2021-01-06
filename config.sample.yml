@@ -9,6 +9,8 @@ database:
 generate:  
    dhcp: /usr/local/dhcp-dns-tools/dhcp
    dns: /usr/local/dhcp-dns-tools/dns
+   radius: /usr/local/dhcp-dns-tools/radius
 
 script:
-   update: /usr/local/bin/update-dhcp-server
+   update-dhcp: /usr/local/bin/update-dhcp-server
+   update-radius: /usr/local/bin/update-radius-server
