@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.13.2');
+use version; our $VERSION = version->declare('0.13.3');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -31,6 +31,7 @@ use File::Copy;
 use Socket;
 use Text::Table;
 use NetAddr::IP;
+use List::Util qw(shuffle);
 
 my $command = shift @ARGV || 'help';
 
@@ -2784,32 +2785,35 @@ sub cmd_generate_radius_file {
 
             my $buffer;
             if ($address_type eq 'dhcp') {
-               if ($enabled eq 'yes') {
-                  $buffer  = "# $hostname\n";
-                  $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
-                  $buffer .= "   Tunnel-Type = VLAN,\n";
-                  $buffer .= "   Tunnel-Medium-Type = IEEE-802,\n";
-                  $buffer .= "   Tunnel-Private-Group-Id = \"347\"\n";
-                  $buffer .= "\n";
-                  }
+               next ALL_MAC_ADDRESS if $enabled ne 'yes';
+
+               my $vlan = $computer_db->{'dset'}{$sector_current}{'vlan'};
+              
+               $buffer  = "# $hostname\n";
+               $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
+               $buffer .= "   Tunnel-Type = VLAN,\n";
+               $buffer .= "   Tunnel-Medium-Type = IEEE-802,\n";
+               $buffer .= "   Tunnel-Private-Group-Id = \"$vlan\"\n";
+               $buffer .= "\n";
+
                print FILE_RADIUS $buffer;
                }
             elsif ($address_type eq 'pool-dhcp') {
                #--- Génère les fichiers pool dhcp ---#
+               ALL_POOL:
                for my $current_pool (keys %{$computer_db->{'pool'}}) {
-                  next if $current_pool ne $ip;
+                  next ALL_POOL if $current_pool ne $ip;
 
-                  if ($enabled eq 'yes') {
-                     $buffer = "subclass \"$current_pool\" 1:$mac_addres; # $comment\n";
+                  next ALL_MAC_ADDRESS if $enabled ne 'yes';
+                  
+                  my $vlan = shift shuffle(@{$computer_db->{'pool'}{$current_pool}{'vlan'}});
 
-                     for my $tag (split/,/, $tags) {
-                        $file_pool{"tag-$tag"} ||= [];
-                        push @{$file_pool{"tag-$tag"}}, "subclass \"tag-$tag\" 1:$mac_addres; # $comment\n";
-                        }
-                     }
-                  else {
-                     $buffer = "#subclass \"$current_pool\" 1:$mac_addres; # $comment\n";
-                     }
+                  $buffer  = "# $hostname\n";
+                  $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
+                  $buffer .= "   Tunnel-Type = VLAN,\n";
+                  $buffer .= "   Tunnel-Medium-Type = IEEE-802,\n";
+                  $buffer .= "   Tunnel-Private-Group-Id = \"$vlan\"\n";
+                  $buffer .= "\n";
 
                   my $current_pool_file_name = $computer_db->{'pool'}{$current_pool}{'file'};
 
@@ -2822,11 +2826,11 @@ sub cmd_generate_radius_file {
 
       close FILE_RADIUS;
 
-      #for my $file_name (keys %file_pool) {
-      #   open FILE_RADIUS, '>', "$FOLDER_GEN_DHCP/$file_name";
-      #   print FILE_RADIUS @{$file_pool{$file_name}};
-      #   close FILE_RADIUS;
-      #   }
+      for my $file_name (keys %file_pool) {
+         open FILE_RADIUS, '>', "$FOLDER_GEN_RADIUS/$file_name";
+         print FILE_RADIUS @{$file_pool{$file_name}};
+         close FILE_RADIUS;
+         }
       }
       print "Copy RADIUS files from $FOLDER_GEN_RADIUS to /etc/freeradius/3.0/mods-config/files/authorize\n";
       exec $SCRIPT_RADIUS_UPDATE;
