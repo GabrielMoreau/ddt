@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.12.5');
+use version; our $VERSION = version->declare('0.13.1');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -62,6 +62,7 @@ my %cmd_db = (
    'enable-pxe'         => \&cmd_enable_pxe,
    'gen-dhcp-file'      => \&cmd_generate_dhcp_file,
    'gen-dns-file'       => \&cmd_generate_dns_file,
+   'gen-radius-file'    => \&cmd_generate_radius_file,
    'help'               => \&cmd_help,
    'load-database'      => \&cmd_load_database,
    'remove-pxe'         => \&cmd_remove_pxe,
@@ -91,7 +92,9 @@ my $FOLDER_APP          = $CONFIG->{'database'}{'folder'}   || '/var/lib/ddt';
 my $FOLDER_BACKUP       = $CONFIG->{'database'}{'backup'}   || "$FOLDER_APP/backup";
 my $FOLDER_GEN_DHCP     = $CONFIG->{'generate'}{'dhcp'}     || "$FOLDER_APP/dhcp";
 my $FOLDER_GEN_DNS      = $CONFIG->{'generate'}{'dns'}      || "$FOLDER_APP/dns";
+my $FOLDER_GEN_DNS      = $CONFIG->{'generate'}{'radius'}   || "$FOLDER_APP/radius";
 my $SCRIPT_UPDATE       = $CONFIG->{'script'}{'update'}     || '/usr/share/ddt/update-dhcp-server';
+my $SCRIPT_RADIUS_UPDATE = $CONFIG->{'script'}{'radius-update'} || '/usr/share/ddt/update-radius-server';
 
 my $COMPUTER_YAML       = "$FOLDER_APP/$COMPUTER_BASENAME.$COMPUTER_EXT";
 
@@ -2740,6 +2743,94 @@ sub cmd_generate_dns_file {
       }
    }
 
+#-------------------------------------------------------------------------------
+#Nom: cmd_generate_radius_file
+#Description: génère les fichiers de configuration des machines pour l'authentification .1x base sur l'adresse MAC
+
+##edt4pcnm155.legi-263
+#a4bb6dc533e2 Cleartext-Password := "a4bb6dc533e2"
+#   Service-Type = Framed-User,
+#   Tunnel-Type = VLAN,
+#   Tunnel-Medium-Type = IEEE-802,
+#   Tunnel-Private-Group-Id = "346"
+
+sub cmd_generate_radius_file {
+   my $computer_db = ipamdb_load($COMPUTER_YAML);
+
+   my %file_pool;
+
+   for my $sector_current (keys %{$computer_db}) {
+      next if $sector_current eq 'dset';
+      next if $sector_current eq 'pool';
+      next if $sector_current eq 'pxe';
+      next if $sector_current eq 'tag';
+      next if $sector_current eq 'version';
+
+      open FILE_RADIUS, '>', "$FOLDER_GEN_RADIUS/$sector_current";
+      my @sectordb = @{$computer_db->{$sector_current}};
+      for my $value (@sectordb) {
+         ALL_MAC_ADDRESS:
+         for my $mac_addres (keys %{$value}) {
+            my $hostname     = $value->{$mac_addres}{'hostname'};
+            my $ip           = $value->{$mac_addres}{'ip'};
+            my $comment      = $value->{$mac_addres}{'comment'};
+            my $address_type = $value->{$mac_addres}{'address_type'};
+            my $enabled      = $value->{$mac_addres}{'enabled'};
+            my $tags         = $value->{$mac_addres}{'tag'} || 'universal';
+
+            my $radius_key = lc $mac_addres;
+            $radius_key =~ s/://g;
+
+            my $buffer;
+            if ($address_type eq 'dhcp') {
+               if ($enabled eq 'yes') {
+                  $buffer  = "# $hostname\n";
+                  $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
+                  $buffer .= "   Tunnel-Type = VLAN,\n";
+                  $buffer .= "   Tunnel-Medium-Type = IEEE-802,\n";
+                  $buffer .= "   Tunnel-Private-Group-Id = \"347\"\n";
+                  $buffer .= "\n";
+                  }
+               print FILE_RADIUS $buffer;
+               }
+            elsif ($address_type eq 'pool-dhcp') {
+               #--- Génère les fichiers pool dhcp ---#
+               for my $current_pool (keys %{$computer_db->{'pool'}}) {
+                  next if $current_pool ne $ip;
+
+                  if ($enabled eq 'yes') {
+                     $buffer = "subclass \"$current_pool\" 1:$mac_addres; # $comment\n";
+
+                     for my $tag (split/,/, $tags) {
+                        $file_pool{"tag-$tag"} ||= [];
+                        push @{$file_pool{"tag-$tag"}}, "subclass \"tag-$tag\" 1:$mac_addres; # $comment\n";
+                        }
+                     }
+                  else {
+                     $buffer = "#subclass \"$current_pool\" 1:$mac_addres; # $comment\n";
+                     }
+
+                  my $current_pool_file_name = $computer_db->{'pool'}{$current_pool}{'file'};
+
+                  $file_pool{$current_pool_file_name} ||= [];
+                  push @{$file_pool{$current_pool_file_name}}, $buffer;
+                  }
+               }
+            }
+         }
+
+      close FILE_RADIUS;
+
+      #for my $file_name (keys %file_pool) {
+      #   open FILE_RADIUS, '>', "$FOLDER_GEN_DHCP/$file_name";
+      #   print FILE_RADIUS @{$file_pool{$file_name}};
+      #   close FILE_RADIUS;
+      #   }
+      }
+      print "Copy RADIUS files from $FOLDER_GEN_RADIUS to /etc/freeradius/3.0/mods-config/files/authorize\n";
+      exec $SCRIPT_RADIUS_UPDATE;
+   }
+
 #--------------------------------------------------------------------------------
 
 sub shell_command {
@@ -3379,6 +3470,7 @@ ddt - management of computer names and IP addresses
  ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
  ddt gen-dhcp-file
  ddt gen-dns-file [--verbose]
+ ddt gen-radius-file
  ddt help
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
@@ -3421,6 +3513,7 @@ COMMANDS
  * enable-pxe        : enable PXE/BOOTP configuration on a computer
  * gen-dhcp-file     : generate DHCP files for the isc DHCP server
  * gen-dns-file      : generate DNS files for the bind domain server
+ * gen-radius-file   : generate Users file base on MAC Address for the FreeRadius server
  * help              : this help
  * load-database     : load the YAML database (be careful)
  * remove-pxe        : remove a PXE/BOOTP configuration
@@ -3477,6 +3570,7 @@ ddt - management of computer names and IP addresses
  ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
  ddt gen-dhcp-file
  ddt gen-dns-file [--verbose]
+ ddt gen-radius-file
  ddt help
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
@@ -3621,6 +3715,10 @@ only DNS.
 =head2 gen-dns-file
 
  ddt gen-dns-file [--verbose]
+
+=head2 gen-radius-file
+
+ ddt gen-radius-file
 
 =head2 help
 
