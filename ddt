@@ -2791,9 +2791,9 @@ sub cmd_generate_radius_file {
               
                $buffer  = "# $hostname\n";
                $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
-               $buffer .= "   Tunnel-Type = VLAN,\n";
-               $buffer .= "   Tunnel-Medium-Type = IEEE-802,\n";
-               $buffer .= "   Tunnel-Private-Group-Id = \"$vlan\"\n";
+               $buffer .= "\tTunnel-Type = VLAN,\n";
+               $buffer .= "\tTunnel-Medium-Type = IEEE-802,\n";
+               $buffer .= "\tTunnel-Private-Group-Id = \"$vlan\"\n";
                $buffer .= "\n";
 
                print FILE_RADIUS $buffer;
@@ -2811,9 +2811,9 @@ sub cmd_generate_radius_file {
 
                   $buffer  = "# $hostname\n";
                   $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
-                  $buffer .= "   Tunnel-Type = VLAN,\n";
-                  $buffer .= "   Tunnel-Medium-Type = IEEE-802,\n";
-                  $buffer .= "   Tunnel-Private-Group-Id = \"$vlan\"\n";
+                  $buffer .= "\tTunnel-Type = VLAN,\n";
+                  $buffer .= "\tTunnel-Medium-Type = IEEE-802,\n";
+                  $buffer .= "\tTunnel-Private-Group-Id = \"$vlan\"\n";
                   $buffer .= "\n";
 
                   my $current_pool_file_name = $computer_db->{'pool'}{$current_pool}{'file'};
