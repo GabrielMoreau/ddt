@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.13.5');
+use version; our $VERSION = version->declare('0.13.6');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -61,6 +61,7 @@ my %cmd_db = (
    'enable-pc'          => \&cmd_enable_pc,
    'enable-float'       => \&cmd_enable_float,
    'enable-pxe'         => \&cmd_enable_pxe,
+   'gen-all-file'       => \&cmd_generate_all_file,
    'gen-dhcp-file'      => \&cmd_generate_dhcp_file,
    'gen-dns-file'       => \&cmd_generate_dns_file,
    'gen-radius-file'    => \&cmd_generate_radius_file,
@@ -2536,6 +2537,15 @@ sub cmd_show_host {
    }
 
 #-------------------------------------------------------------------------------
+
+sub cmd_generate_all_file {
+   local @ARGV = @_;
+
+   cmd_generate_dhcp_file(@ARGV);
+   cmd_generate_radius_file(@ARGV);
+   }
+
+#-------------------------------------------------------------------------------
 #Nom: cmd_generate_dhcp_file
 #Description: génère les fichiers de configuration des machines et des pools du dhcp
 
@@ -3474,6 +3484,7 @@ ddt - management of computer names and IP addresses
  ddt enable-float [--pool|-p pool] [--mac|-m mac]
  ddt enable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt gen-all-file
  ddt gen-dhcp-file
  ddt gen-dns-file [--verbose]
  ddt gen-radius-file
@@ -3574,6 +3585,7 @@ ddt - management of computer names and IP addresses
  ddt enable-float [--pool|-p pool] [--mac|-m mac]
  ddt enable-pc [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
  ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
+ ddt gen-all-file
  ddt gen-dhcp-file
  ddt gen-dns-file [--verbose]
  ddt gen-radius-file
@@ -3713,6 +3725,10 @@ only DNS.
 =head2 enable-pxe
 
  ddt enable-pxe [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--bootp|-b pxe_config]
+
+=head2 gen-all-file
+
+ ddt gen-all-file
 
 =head2 gen-dhcp-file
 
