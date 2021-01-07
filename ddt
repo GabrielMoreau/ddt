@@ -2638,7 +2638,7 @@ sub cmd_generate_dhcp_file {
          }
       }
       print "Copy DHCP files from $FOLDER_GEN_DHCP to /etc/dhcp/include/\n";
-      exec $SCRIPT_UPDATE_DHCP if -x $SCRIPT_UPDATE_DHCP;
+      exec $SCRIPT_UPDATE_DHCP if -e $SCRIPT_UPDATE_DHCP;
    }
 
 #-------------------------------------------------------------------------------
@@ -2834,7 +2834,7 @@ sub cmd_generate_radius_file {
          }
       }
       print "Copy RADIUS files from $FOLDER_GEN_RADIUS to /etc/freeradius/3.0/mods-config/files/authorize\n";
-      exec $SCRIPT_UPDATE_RADIUS if -x $SCRIPT_UPDATE_RADIUS;
+      exec $SCRIPT_UPDATE_RADIUS if -e $SCRIPT_UPDATE_RADIUS;
    }
 
 #--------------------------------------------------------------------------------
