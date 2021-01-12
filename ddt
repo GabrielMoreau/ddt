@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.3');
+use version; our $VERSION = version->declare('0.14.4');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1198,7 +1198,7 @@ sub cmd_change_type {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   if ($type !~ m/^ (dhcp|float|static) $/xms) {
+   if ($type !~ m/^ (dhcp|float|static|radius) $/xms) {
       die "Error: bad type: $type\n";
       }
 
@@ -2885,7 +2885,7 @@ sub cmd_generate_radius_file {
             $radius_key =~ s/://g;
 
             my $buffer;
-            if ($address_type =~ m/dhcp|radius/) {
+            if ($address_type =~ m/^ (dhcp|static|radius) $/xms) {
                next ALL_MAC_ADDRESS if $enabled ne 'yes';
 
                my $vlan = $computer_db->{'dset'}{$sector_current}{'vlan'};
