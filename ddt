@@ -2880,12 +2880,12 @@ sub cmd_generate_radius_file {
             $radius_key =~ s/://g;
 
             my $buffer;
-            if ($address_type eq 'dhcp') {
+            if ($address_type =~ m/dhcp|radius/) {
                next ALL_MAC_ADDRESS if $enabled ne 'yes';
 
                my $vlan = $computer_db->{'dset'}{$sector_current}{'vlan'};
-              
-               $buffer  = "# $hostname\n";
+
+               $buffer  = "# $mac_addres / $hostname\n";
                $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
                $buffer .= "\tTunnel-Type = VLAN,\n";
                $buffer .= "\tTunnel-Medium-Type = IEEE-802,\n";
@@ -2901,7 +2901,7 @@ sub cmd_generate_radius_file {
                   next ALL_POOL if $current_pool ne $ip;
 
                   next ALL_MAC_ADDRESS if $enabled ne 'yes';
-                  
+
                   my @vlans = shuffle @{$computer_db->{'pool'}{$current_pool}{'vlan'}};
                   my $vlan = shift @vlans;
 
