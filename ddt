@@ -39,6 +39,7 @@ my %cmd_db = (
    'add-alias'          => \&cmd_add_alias,
    'add-dhcp'           => \&cmd_add_dhcp,
    'add-float'          => \&cmd_add_float,
+   'add-radius'         => \&cmd_add_radius,
    'add-static'         => \&cmd_add_static,
    'add-virtual'        => \&cmd_add_virtual,
    'change-comment'     => \&cmd_change_comment,
@@ -740,6 +741,49 @@ sub cmd_add_virtual {
       'alias'        => '',
       }};
    print "Add the virtual computer: $hostname, IP: $ip, sector: $sector\n";
+
+   ipamdb_save("$COMPUTER_YAML", $computer_db);
+   }
+
+#-------------------------------------------------------------------------------
+# Tel or Wi-Fi equiment that are on another VLAN not managed by us but need to be in the radius server
+
+sub cmd_add_radius {
+   local @ARGV = @_;
+
+   my $help = get_cmd_name();
+   my ($sector, $mac, $comment);
+
+   GetOptions(
+      'sector|s|d=s'    => \$sector,
+      'mac|m=s'         => \$mac,
+      'comment|c=s'     => \$comment,
+      );
+
+   exit_on_error_option($help)
+      or $sector     eq ''
+      or $mac        eq ''
+      or $comment    eq '';
+
+   my $computer_db = ipamdb_load($COMPUTER_YAML);
+
+   $mac     = normalize_mac_address($mac);
+   $comment = normalize_comment($comment);
+   my $timestamp = time;
+
+   control_exist_sector($computer_db, $sector)  or exit;
+   control_syntax_mac_address($mac)             or exit;
+   control_exist_mac($computer_db, $mac)        or die "Error: physical MAC address already exists: $mac\n";
+   control_syntax_comment($comment)             or exit;
+
+   push @{$computer_db->{$sector}}, { $mac => {
+      'address_type' => 'radius',
+      'enabled'      => 'yes',
+      'create_time'  => $timestamp,
+      'modify_time'  => $timestamp,
+      'comment'      => $comment,
+      }};
+   print "Add the radius entry: $mac, sector: $sector\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -3476,6 +3520,7 @@ ddt - management of computer names and IP addresses
  ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
  ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-radius [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
  ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
@@ -3520,6 +3565,7 @@ COMMANDS
  * add-alias         : add an alias for a computer (like CNAME for the DNS)
  * add-dhcp          : add a computer with a fix DHCP IP or in a DHCP pool
  * add-float         : add a computer with an IP in a DHCP pool
+ * add-radius        : add an equipment only on the radius server
  * add-static        : add a computer with a static IP
  * add-virtual       : add a virtual computer with a static IP but a virtual MAC (useful to declare float computer in DNS)
  * change-comment    : change the computer comment
@@ -3577,6 +3623,7 @@ ddt - management of computer names and IP addresses
  ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
  ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-radius [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
  ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
@@ -3643,6 +3690,10 @@ and entries could be added, deleted, or modified by the command line.
 =head2 add-float
 
  ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+
+=head2 add-radius
+
+ ddt add-radius [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
 
 =head2 add-static
 
