@@ -881,8 +881,13 @@ sub change_ip {
       next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
  
       if ($attribute->{'address_type'} eq 'pool-dhcp') {
-         die "Error: host $hostname from sector $sector belongs to a a pool [FAILED]" .
+         die "Error: host $hostname from sector $sector belongs to a pool [FAILED]" .
             " ... use 'del-float' command before";
+         }
+ 
+      if ($attribute->{'address_type'} eq 'radius') {
+         die "Error: host $hostname from sector $sector belongs to radius [FAILED]" .
+            " ... use 'del-radius' command before";
          }
 
       $attribute->{'modify_time'} = time;
@@ -1277,8 +1282,13 @@ sub disable_pc {
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error: host $hostname from sector $sector belongs to a a pool [FAILED]" .
+            die "Error: host $hostname from sector $sector belongs to a pool [FAILED]" .
                " ... use 'disable-float' command instead";
+            }
+
+         if ($attribute->{'address_type'} eq 'radius') {
+            die "Error: host $hostname from sector $sector belongs to radius [FAILED]" .
+               " ... use 'disable-radius' command instead";
             }
 
          if ($attribute->{'enabled'} eq 'no') {
@@ -1405,8 +1415,13 @@ sub enable_pc {
          next LOOP_ON_COMPUTER if $attribute->{'hostname'} ne $hostname;
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
-            die "Error: host $hostname from sector $sector belongs to a a pool [FAILED]" .
+            die "Error: host $hostname from sector $sector belongs to a pool [FAILED]" .
                " ... use 'enable-float' command instead";
+            }
+
+         if ($attribute->{'address_type'} eq 'radius') {
+            die "Error: host $hostname from sector $sector belongs to radius [FAILED]" .
+               " ... use 'enable-radius' command instead";
             }
 
          if ($attribute->{'enabled'} eq 'yes') {
@@ -1622,6 +1637,11 @@ sub del_pc {
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
             die "Error: host remove $hostname from the sector $sector [FAILED]" .
                " ... The host $hostname belongs to a DHCP pool.\n";
+            }
+
+         if ($attribute->{'address_type'} eq 'radius') {
+            die "Error: host remove $hostname from the sector $sector [FAILED]" .
+               " ... The host $hostname belongs to radius.\n";
             }
 
          splice(@{$computer_db->{$sector}}, $computer_index => 1);
@@ -2091,6 +2111,10 @@ sub cmd_enable_pxe {
             die "Error. Host $hostname ($sector) in a pool. No PXE possible [FAILED]\n";
             }
 
+         if ($attribute->{'address_type'} eq 'radius') {
+            die "Error. Host $hostname ($sector) in radius. No PXE possible [FAILED]\n";
+            }
+
          $attribute->{'modify_time'} = time;
          $attribute->{'pxe_config'}  = $pxe_config;
          ipamdb_save("$COMPUTER_YAML", $computer_db);
@@ -2169,6 +2193,10 @@ sub cmd_disable_pxe {
 
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
             die "Error: host $hostname ($sector) in a pool. No PXE possible [FAILED]\n";
+            }
+
+         if ($attribute->{'address_type'} eq 'radius') {
+            die "Error: host $hostname ($sector) in radius. No PXE possible [FAILED]\n";
             }
 
          next LOOP_ON_COMPUTER if not exists $attribute->{'pxe_config'};
