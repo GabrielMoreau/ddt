@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.13.6');
+use version; our $VERSION = version->declare('0.14.1');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
