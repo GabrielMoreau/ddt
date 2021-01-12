@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.2');
+use version; our $VERSION = version->declare('0.14.3');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -752,16 +752,19 @@ sub cmd_add_radius {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($sector, $mac, $comment);
+   my ($hostname, $sector, $mac, $comment);
 
    GetOptions(
+      'hostname|h=s'    => \$hostname,
       'sector|s|d=s'    => \$sector,
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
       );
 
+   ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
-      if $sector     eq ''
+      if $hostname   eq ''
+      or $sector     eq ''
       or $mac        eq ''
       or $comment    eq '';
 
@@ -771,19 +774,21 @@ sub cmd_add_radius {
    $comment = normalize_comment($comment);
    my $timestamp = time;
 
-   control_exist_sector($computer_db, $sector)  or exit;
-   control_syntax_mac_address($mac)             or exit;
-   control_exist_mac($computer_db, $mac)        or die "Error: physical MAC address already exists: $mac\n";
-   control_syntax_comment($comment)             or exit;
+   control_exist_sector($computer_db, $sector)              or exit;
+   control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
+   control_syntax_mac_address($mac)                         or exit;
+   control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
+   control_syntax_comment($comment)                         or exit;
 
    push @{$computer_db->{$sector}}, { $mac => {
+      'hostname'     => $hostname,
       'address_type' => 'radius',
       'enabled'      => 'yes',
       'create_time'  => $timestamp,
       'modify_time'  => $timestamp,
       'comment'      => $comment,
       }};
-   print "Add the radius entry: $mac, sector: $sector\n";
+   print "Add the radius entry: $hostname, MAC: $mac, sector: $sector\n";
 
    ipamdb_save("$COMPUTER_YAML", $computer_db);
    }
@@ -3312,11 +3317,12 @@ sub exit_on_error_option {
 
    elsif ($command eq 'add-radius') {
       print "List of options for command: $command\n";
+      print " -h : radius entry label like hostname (mandatory). Example: -h tel-toto\n";
       print " -s : sector attachment (mandatory)\n";
       print " -m : physical MAC address (mandatory)\n";
       print " -c : comment (mandatory). Example: 2014-04-07 Tel Phone - Olivier Toto (TOIP)\n";
       print "Example:\n";
-      print " ddt add-radius -s legi-toip -m 00:AB:1B:CC:AA:2F -c '2014-04-07 Tel Phone - Olivier Toto (TOIP)\n";
+      print " ddt add-radius -h tel-toto -s legi-toip -m 00:AB:1B:CC:AA:2F -c '2014-04-07 Tel Phone - Olivier Toto (TOIP)\n";
       }
 
    elsif ($command eq 'add-static') {
@@ -3557,7 +3563,7 @@ ddt - management of computer names and IP addresses
  ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
  ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
- ddt add-radius [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-radius [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
  ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
@@ -3660,7 +3666,7 @@ ddt - management of computer names and IP addresses
  ddt add-alias [--hostname|-h hostname] [--sector|-s|-d sector] [--alias|-a alias]
  ddt add-dhcp [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-float [--pool|-p pool] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
- ddt add-radius [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-radius [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
  ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
@@ -3730,7 +3736,7 @@ and entries could be added, deleted, or modified by the command line.
 
 =head2 add-radius
 
- ddt add-radius [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt add-radius [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
 
 =head2 add-static
 
