@@ -2541,7 +2541,7 @@ sub cmd_show_host {
 sub cmd_generate_all_file {
    local @ARGV = @_;
 
-   cmd_generate_dhcp_file('--kept-hand', @ARGV);
+   cmd_generate_dhcp_file('--keep-hand', @ARGV);
    cmd_generate_radius_file(@ARGV);
    }
 
@@ -2553,10 +2553,10 @@ sub cmd_generate_dhcp_file {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($kept_hand);
+   my ($keep_hand);
 
    GetOptions(
-      'kept-hand|k' => \$kept_hand,
+      'keep-hand|k' => \$keep_hand,
       );
 
    backup_database();
@@ -2660,7 +2660,7 @@ sub cmd_generate_dhcp_file {
    print "Copy DHCP files from $FOLDER_GEN_DHCP to /etc/dhcp/include/\n";
 
    if (-e $SCRIPT_UPDATE_DHCP) {
-      exec   $SCRIPT_UPDATE_DHCP if not $kept_hand;
+      exec   $SCRIPT_UPDATE_DHCP if not $keep_hand;
       system $SCRIPT_UPDATE_DHCP;
       }
    }
