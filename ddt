@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.5');
+use version; our $VERSION = version->declare('0.14.6');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2918,7 +2918,7 @@ sub cmd_generate_radius_file {
 
                my $vlan = $computer_db->{'dset'}{$sector_current}{'vlan'};
 
-               $buffer  = "# $mac_addres / $hostname\n";
+               $buffer  = "# $mac_addres / $hostname / $comment\n";
                $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
                $buffer .= "\tTunnel-Type = VLAN,\n";
                $buffer .= "\tTunnel-Medium-Type = IEEE-802,\n";
@@ -2938,7 +2938,7 @@ sub cmd_generate_radius_file {
                   my @vlans = shuffle @{$computer_db->{'pool'}{$current_pool}{'vlan'}};
                   my $vlan = shift @vlans;
 
-                  $buffer  = "# $hostname\n";
+                  $buffer  = "# $mac_addres / $hostname / $comment\n";
                   $buffer .= "$radius_key Cleartext-Password := \"$radius_key\"\n";
                   $buffer .= "\tTunnel-Type = VLAN,\n";
                   $buffer .= "\tTunnel-Medium-Type = IEEE-802,\n";
