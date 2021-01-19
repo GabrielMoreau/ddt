@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.6');
+use version; our $VERSION = version->declare('0.14.7');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2957,7 +2957,7 @@ sub cmd_generate_radius_file {
       close FILE_RADIUS;
 
       for my $file_name (keys %file_pool) {
-         open FILE_RADIUS, '>', "$FOLDER_GEN_RADIUS/$file_name";
+         open FILE_RADIUS, '>', "$FOLDER_GEN_RADIUS/users.$file_name";
          print FILE_RADIUS @{$file_pool{$file_name}};
          close FILE_RADIUS;
          }
