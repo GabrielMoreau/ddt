@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.7');
+use version; our $VERSION = version->declare('0.14.8');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2897,7 +2897,7 @@ sub cmd_generate_radius_file {
       next if $sector_current eq 'tag';
       next if $sector_current eq 'version';
 
-      open FILE_RADIUS, '>', "$FOLDER_GEN_RADIUS/$sector_current";
+      open FILE_RADIUS, '>', "$FOLDER_GEN_RADIUS/users.$sector_current";
       my @sectordb = @{$computer_db->{$sector_current}};
       for my $value (@sectordb) {
          ALL_MAC_ADDRESS:
