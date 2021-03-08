@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.8');
+use version; our $VERSION = version->declare('0.14.9');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -887,12 +887,12 @@ sub change_ip {
  
       if ($attribute->{'address_type'} eq 'pool-dhcp') {
          die "Error: host $hostname from sector $sector belongs to a pool [FAILED]" .
-            " ... use 'del-float' command before";
+            " ... no IP is defined";
          }
  
       if ($attribute->{'address_type'} eq 'radius') {
          die "Error: host $hostname from sector $sector belongs to radius [FAILED]" .
-            " ... use 'del-radius' command before";
+            " ... no IP is defined";
          }
 
       $attribute->{'modify_time'} = time;
@@ -1319,11 +1319,6 @@ sub disable_pc {
                " ... use 'disable-float' command instead";
             }
 
-         if ($attribute->{'address_type'} eq 'radius') {
-            die "Error: host $hostname from sector $sector belongs to radius [FAILED]" .
-               " ... use 'disable-radius' command instead";
-            }
-
          if ($attribute->{'enabled'} eq 'no') {
             print "Info: host $hostname from sector $sector is already disable [OK]" .
                " ... Status: $attribute->{'enabled'}\n";
@@ -1450,11 +1445,6 @@ sub enable_pc {
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
             die "Error: host $hostname from sector $sector belongs to a pool [FAILED]" .
                " ... use 'enable-float' command instead";
-            }
-
-         if ($attribute->{'address_type'} eq 'radius') {
-            die "Error: host $hostname from sector $sector belongs to radius [FAILED]" .
-               " ... use 'enable-radius' command instead";
             }
 
          if ($attribute->{'enabled'} eq 'yes') {
@@ -1670,11 +1660,6 @@ sub del_pc {
          if ($attribute->{'address_type'} eq 'pool-dhcp') {
             die "Error: host remove $hostname from the sector $sector [FAILED]" .
                " ... The host $hostname belongs to a DHCP pool.\n";
-            }
-
-         if ($attribute->{'address_type'} eq 'radius') {
-            die "Error: host remove $hostname from the sector $sector [FAILED]" .
-               " ... The host $hostname belongs to radius.\n";
             }
 
          splice(@{$computer_db->{$sector}}, $computer_index => 1);
