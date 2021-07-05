@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (C) 2006-2020, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+# Copyright (C) 2006-2021, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 # License GNU GPL version 2 or later and Perl equivalent
 #
 # apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl libtext-table-perl libnetaddr-ip-perl
