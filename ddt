@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.9');
+use version; our $VERSION = version->declare('0.14.10');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -3587,7 +3587,7 @@ ddt - management of computer names and IP addresses
  ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
  ddt change-type [--hostname|-h hostname] [--sector|-s|-d sector] [--type|-t type]
- ddt check-dns [--direct] [--reverse]
+ ddt check-dns [--direct|-d] [--reverse|-r] [--by-ip|-b] [--clean-cache|-c]
  ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
@@ -3690,7 +3690,7 @@ ddt - management of computer names and IP addresses
  ddt change-mac [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-tag [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--tag|-t tag]
  ddt change-type [--hostname|-h hostname] [--sector|-s|-d sector] [--type|-t type]
- ddt check-dns [--direct] [--reverse]
+ ddt check-dns [--direct|-d] [--reverse|-r] [--by-ip|-b] [--clean-cache|-c]
  ddt create-sector [--sector|-s|-d sector] [--dns-extension|-e dns_extension] [--comment|-c comment]
  ddt create-pool [--pool|-p pool] [--sector|-s|-d sector] [--file-pool|-f file_pool] [--ipaddress-pool|-i ipaddress_pool]
  ddt create-pxe [--bootp|-b pxe_config] [--next-server|-n next_server] [--filename|-f filename] [--comment|-c comment]
@@ -3798,7 +3798,12 @@ only DNS.
 
 =head2 check-dns
 
- ddt check-dns [--direct] [--reverse]
+ ddt check-dns [--direct|-d] [--reverse|-r] [--by-ip|-b] [--clean-cache|-c]
+
+Only check reverse with C<--reverse> and direct with C<--direct>, otherwise, check the two.
+Clean C<nscd> host cache with option C<--clean-cache>.
+
+Option C<--by-ip> will check every IP in the DNS that is not declare un ddt.
 
 =head2 create-sector
 
