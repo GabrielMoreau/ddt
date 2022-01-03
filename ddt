@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (C) 2006-2021, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+# Copyright (C) 2006-2022, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 # License GNU GPL version 2 or later and Perl equivalent
 #
 # apt-get install perl-base perl-modules libyaml-syck-perl libnet-netmask-perl libreadonly-perl libfile-touch-perl libtext-table-perl libnetaddr-ip-perl
@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.10');
+use version; our $VERSION = version->declare('0.14.11');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -3555,7 +3555,7 @@ sub cmd_version {
 
    print <<'END';
 ddt - management of computer names and IP addresses
-Copyright (C) 2006-2019, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+Copyright (C) 2006-2022, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 Main author Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>
 License GNU GPL version 2 or later and Perl equivalent
 END
@@ -3942,4 +3942,4 @@ Written by Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr>, Kevin Rever
 
 License GNU GPL version 2 or later and Perl equivalent
 
-Copyright (C) 2006-2019, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+Copyright (C) 2006-2022, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
