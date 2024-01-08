@@ -1,11 +1,11 @@
-# SoftWare / DDT - Computer Names and IP Address Management (IPAM)
+# DDT - Computer Names and IP Address Management (IPAM)
 
 ## Description
 
 DDT is an acronym for DHCP-DNS-Tools.
 In practise, DDT is an IP Address Management (IPAM) service.
 It has been used in the LEGI laboratory for over 10 years.
-```bashddt``` (```dhcp-dns-tools```) is a small tool to maintain a set of computers/IP.
+```ddt``` (```dhcp-dns-tools```) is a small tool to maintain a set of computers/IP.
 In order to help you in this task, ddt command has a set of action
 to generated DHCP and DNS configuration files.
 
@@ -14,18 +14,22 @@ but easily configurable for your site like a swiss army knife.
 Everything is saved in a YAML database
 and entries could be added, deleted, or modified by the command line.
 
-All the command help and description is on the online manual
-[ddt](https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/).
+* All the command help and description is on the online manual
+  [ddt](https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/).
+
+* The master Git repository in on the [GRICAD Gitlab](https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ddt).
+  Other Git repository are mirror or fork.
+
 
 ## Debian package
 
 Debian is a GNU/Linux distribution.
-Debian (and certainly Ubuntu) package for amd64 arch could be download on: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/download..
+Debian (and certainly Ubuntu) package for all arch (and so amd64) could be download on: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ddt/download..
 
 You can then install it with
 
 ```bash
-sudo dpkg -i ddt_*_amd64.deb
+sudo dpkg -i ddt_*_all.deb
 ```
 (just replace * with the version you have donwloaded).
 
@@ -50,7 +54,7 @@ git clone https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ddt
 git pull
 ```
 
-It is possible to have access to writing at the forge on reasoned request to [Gabriel Moreau](mailto:Gabriel.Moreau__AT__legi.grenoble-inp.fr).
+It is possible to have access to writing at the forge on reasoned request to [Gabriel Moreau](mailto:Gabriel.Moreau__AT__univ-grenoble-alpes.fr).
 For issues of administration time and security, the forge is not writable without permission.
 For the issues of decentralization of the web, autonomy and non-allegiance to the ambient (and North American) centralism, we use our own forge...
 
