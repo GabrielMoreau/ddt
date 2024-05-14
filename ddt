@@ -174,8 +174,8 @@ sub control_exist_pool {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: control_exist_sector
-#Description: controle l'existence d'un sector dans le fichier YAML
+#Name: control_exist_sector
+#Description: checks the existence of a sector in the YAML file
 #             return 0 (faux) ou 1 (vrai)
 
 sub control_exist_sector {
@@ -188,8 +188,8 @@ sub control_exist_sector {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: control_exist_hostname
-#Description: controle l'existence d'un nom de machine dans le fichier YAML
+#Name: control_exist_hostname
+#Description: checks the existence of a machine name in the YAML file
 #             return 0 (si trouvé) ou 1 (si non trouvé)
 
 sub control_exist_hostname {
@@ -209,8 +209,8 @@ sub control_exist_hostname {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: control_exist_mac
-#Description: controle l'existence d'une adresse MAC dans le fichier YAML
+#Name: control_exist_mac
+#Description: checks the existence of a MAC address in the YAML file
 #             return 0 (si trouvé) ou 1 (si non trouvé)
 
 sub control_exist_mac {
@@ -235,8 +235,8 @@ sub control_exist_mac {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: control_exist_ip
-#Description: controle l'existence d'une adresse IP dans le fichier YAML
+#Name: control_exist_ip
+#Description: checks the existence of an IP address in the YAML file
 #             return 0 (si trouvé) ou 1 (si non trouvé)
 
 sub control_exist_ip {
@@ -289,9 +289,9 @@ sub control_ip_in_range {
    }
 
 #-------------------------------------------------------------------------------------
-#Nom: control_syntaxe_mac
-#Description: controle la syntaxe d'une adresse MAC (juste la longueur pas les valeurs)
-#             return 0 (si trouvé) ou 1 (si non trouvé)
+#Name: control_syntaxe_mac
+#Description: controls the syntax of a MAC address (just the length, not the values)
+#             return 0 (if found) or 1 (if not found)
 
 sub control_syntax_mac_address {
    my $mac = shift;
@@ -305,9 +305,9 @@ sub control_syntax_mac_address {
    }
 
 #-------------------------------------------------------------------------------------
-#Nom: control_syntax_ip
-#Description: controle la syntaxe d'une adresse IP (juste la longueur pas les valeurs)
-#             return 0 (si trouvé) ou 1 (si non trouvé)
+#Name: control_syntax_ip
+#Description: checks the syntax of an IP address (just the length, not the values)
+#             return 0 (if found) or 1 (if not found)
 
 sub control_syntax_ip {
    my $ip = shift;
@@ -450,8 +450,8 @@ sub get_computer_from_mac {
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-#Nom: add_alias
-#Description: ajoute un alias pour une machine. Pour la fonctionnalité CNAME dans le DNS.
+#Name: add_alias
+#Description: adds an alias for a machine. For CNAME functionality in DNS.
 # Seems not finish and not functional !
 
 sub add_alias {
@@ -478,8 +478,8 @@ sub add_alias {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: add_static
-#Description: ajoute une machine non dhcp (donc à adressage fixe dans le fichier YAML)
+#Name: add_static
+#Description: adds a non-dhcp machine (i.e. fixed address in the YAML file)
 
 sub add_static {
    my ($computer_db, $hostname, $sector, $ip, $mac, $comment) = @_;
@@ -511,8 +511,8 @@ sub add_static {
 
 
 #-------------------------------------------------------------------------------
-#Nom: add_dhcp
-#Description: section à corriger pour prendre en compte l'ajout d'une machine dans un pool dhcp
+#Name: add_dhcp
+#Description: section to be corrected to take into account the addition of a machine to a dhcp pool
 #--- usage: ddt add-dhcp -s legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66 -i 194.254.66.165
 
 sub add_dhcp {
@@ -798,9 +798,8 @@ sub cmd_add_radius {
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-#Nom: change_mac
-#Description: change la mac adresse d'une machine en saisissant soit l'ip
-#             soit le nom de la mahcine et spécifiant le domaine
+#Name: change_mac
+#Description: change the mac address of a machine by entering either the ip or the mahcine name and specifying the domain
 #--- usage: ddt change-mac -s legi-sector03 -h meolpacif -m 00:18:F3:03:6F:66
 #--- usage: ddt change-mac -s legi-sector03 -i 194.254.66.187 -m 00:18:F3:03:6F:66
 
@@ -860,9 +859,8 @@ sub change_mac {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: change_ip
-#Description: change l'adresse IP d'une machine en saisissant le nom de la machine
-#             et le domaine
+#Name: change_ip
+#Description: change a machine's IP address by entering the machine name and domain
 
 sub change_ip {
    my ($hostname, $sector, $ip) = @_;
@@ -904,8 +902,8 @@ sub change_ip {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: change_host
-#Description: change le computer hostname en saisissant l'IP et le domaine
+#Name: change_host
+#Description: change computer hostname by entering IP and domain
 
 sub change_host {
    my ($hostname, $sector, $ip, $mac) = @_;
@@ -1258,8 +1256,8 @@ sub cmd_change_type {
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-#Nom: disable_pc
-#Description: désactive une machine (du DHCP ou en IP statique, et du DNS) (champs enabled=non)
+#Name: disable_pc
+#Description: disable a machine (from DHCP or static IP, and from DNS) (enabled=no field)
 
 sub disable_pc {
    my ($hostname, $sector, $ip) = @_;
@@ -1384,8 +1382,8 @@ sub disable_float {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: enable_pc
-#Description: active une machine désactivée(du DHCP ou en IP statique, et du DNS) (champs enabled=non)
+#Name: enable_pc
+#Description: enables a disabled machine (from DHCP or static IP, and from DNS) (enabled=no field)
 
 sub enable_pc {
    my ($hostname, $sector, $ip) = @_;
@@ -1616,8 +1614,8 @@ sub cmd_enable_float {
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-#Nom: del_pc
-#Description: supprime une machine en DHCP ou en IP statique.
+#Name: del_pc
+#Description: deletes a DHCP or static IP machine
 
 sub del_pc {
    my ($hostname, $sector, $ip) = @_;
@@ -1671,8 +1669,8 @@ sub del_pc {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: del_float
-#Description: supprime une machine d'un pool DHCP
+#Name: del_float
+#Description: removes a machine from a DHCP pool
 
 sub del_float {
    my ($pool, $mac) = @_;
@@ -1850,11 +1848,11 @@ sub cmd_sector_add_ip {
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-#Nom: create_pool
-#Description: crée un pool dans le fichier de données YAML et dans le DHCP.
+#Name: create_pool
+#Description: creates a pool in the YAML data file and in DHCP
 #
-#Commentaires: il y a un petit bug si jamais on rentre que des adresses ip qui existent déjà.
-#              Le pool est créé mais sans adresses ip.
+#Comment: there's a small bug if you only enter ip addresses that already exist.
+#         The pool is created but without ip addresses.
 
 sub cmd_create_pool {
    local @ARGV = @_;
@@ -2509,8 +2507,8 @@ sub cmd_search_mac {
    }
 
 #--------------------------------------------------------------------------------
-#Nom: show
-#Description: liste les machines à partir du fichier YAML par nom de domaine.
+#Name: show
+#Description: lists machines from YAML file by domain name.
 
 sub cmd_show_host {
    my %ipdb = ();
@@ -2636,8 +2634,8 @@ sub cmd_generate_all_file {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: cmd_generate_dhcp_file
-#Description: genere les fichiers de configuration des machines et des pools du dhcp
+#Name: cmd_generate_dhcp_file
+#Description: generates dhcp machine and pool configuration files
 
 sub cmd_generate_dhcp_file {
    local @ARGV = @_;
@@ -2756,8 +2754,8 @@ sub cmd_generate_dhcp_file {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: cmd_generate_dns_file
-#Description: genere les fichiers d'enregistrements DNS
+#Name: cmd_generate_dns_file
+#Description: generates DNS record files
 
 sub cmd_generate_dns_file {
    local @ARGV = @_;
@@ -2860,8 +2858,8 @@ sub cmd_generate_dns_file {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: cmd_generate_radius_file
-#Description: génère les fichiers de configuration des machines pour l'authentification .1x base sur l'adresse MAC
+#Name: cmd_generate_radius_file
+#Description: generates machine configuration files for 802.1x authentication based on MAC address
 
 ##edt4pcnm155.legi-263
 #a4bb6dc533e2 Cleartext-Password := "a4bb6dc533e2"
@@ -3094,10 +3092,9 @@ sub cmd_check_dns {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: load_data_dhcp
-#Description: permet de charger le fichier de données YAML via les fichiers de configuration
-#             machines.
-#            ATTENTION: LES COMMENTAIRES DU FICHIER DISPARAITRONT.
+#Name: load_data_dhcp
+#Description: loads the YAML data file via machine configuration files.
+#             WARNING: FILE COMMENTS WILL DISAPPEAR.
 
 sub load_data_dhcp {
    my ($sector, $input_file) = @_;
@@ -3181,8 +3178,8 @@ sub load_data_dhcp {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: load_data_pool
-#Description: permet de charger le fichier YAML via les fichiers de conf 'pool' du dhcp.
+#Name: load_data_pool
+#Description: loads the YAML file via the dhcp 'pool' conf files.
 
 sub load_data_pool {
    my ($sector, $input_file) = @_;
@@ -3283,8 +3280,8 @@ sub cmd_load_database {
    }
 
 #-------------------------------------------------------------------------------
-#Nom: backup_database
-#Description: sauvegarde et réinitialise les fichiers d'enregistrements DHCP.
+#Name: backup_database
+#Description: saves and resets DHCP record files.
 
 sub backup_database {
    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime time;
@@ -3300,8 +3297,8 @@ sub backup_database {
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
-#Nom: exit_on_error_option
-#Description: messages d'aide des options pour les différentes commandes
+#Name: exit_on_error_option
+#Description: option help messages for various commands
 
 sub exit_on_error_option {
   my ($command) = @_;
@@ -3567,8 +3564,8 @@ END
    }
 
 #-------------------------------------------------------------------------------
-#Nom: usage
-#Description: message d'aide sur les commandes du script
+#Name: usage
+#Description: help message on script commands
 
 sub cmd_help {
    print <<END;
