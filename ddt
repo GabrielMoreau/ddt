@@ -166,6 +166,9 @@ sub ipamdb_save {
 #--------------------------------------------------------------------------------
 # CONTROL section
 #--------------------------------------------------------------------------------
+#Name: control_exist_pool
+#Description: checks the existence of a pool in the YAML file
+#             return 0 (false) ou 1 (true)
 
 sub control_exist_pool {
    my ($computer_db, $pool) = @_;
@@ -176,7 +179,7 @@ sub control_exist_pool {
 #-------------------------------------------------------------------------------
 #Name: control_exist_sector
 #Description: checks the existence of a sector in the YAML file
-#             return 0 (faux) ou 1 (vrai)
+#             return 0 (false) ou 1 (true)
 
 sub control_exist_sector {
    my ($computer_db, $sector) = @_;
@@ -190,7 +193,7 @@ sub control_exist_sector {
 #-------------------------------------------------------------------------------
 #Name: control_exist_hostname
 #Description: checks the existence of a machine name in the YAML file
-#             return 0 (si trouvé) ou 1 (si non trouvé)
+#             return 0 (if found) or 1 (if not found)
 
 sub control_exist_hostname {
    my ($computer_db, $sector, $hostname) = @_;
@@ -211,7 +214,7 @@ sub control_exist_hostname {
 #-------------------------------------------------------------------------------
 #Name: control_exist_mac
 #Description: checks the existence of a MAC address in the YAML file
-#             return 0 (si trouvé) ou 1 (si non trouvé)
+#             return 0 (if found) or 1 (if not found)
 
 sub control_exist_mac {
    my ($computer_db, $mac) = @_;
@@ -237,7 +240,7 @@ sub control_exist_mac {
 #-------------------------------------------------------------------------------
 #Name: control_exist_ip
 #Description: checks the existence of an IP address in the YAML file
-#             return 0 (si trouvé) ou 1 (si non trouvé)
+#             return 0 (if found) or 1 (if not found)
 
 sub control_exist_ip {
    my ($computer_db, $ip) = @_;
@@ -252,17 +255,17 @@ sub control_exist_ip {
       LOOP_ON_COMPUTER:
       for my $computer (@{$computer_db->{$sector_current}}) {
          my ($mac_address, $attribute) = %{$computer};
-         #print "Erreur: cette adresse IP $ip existe déjà\n";
+         #print "Error: this IP address $ip already exists\n";
          return 0 if $attribute->{'ip'} eq $ip;
          }
       }
 
    for my $current_pool (keys %{$computer_db->{'pool'}}) {
-      #--- Cette partie pour tester les ip des pools est bonne ne plus la changer ---#
+      #--- This part for testing pool ip addresses is good, don't change it again ---#
       my @T_pool_ip = @{$computer_db->{'pool'}{$current_pool}{'ip'}};
 
       for my $pool_ip (@T_pool_ip) {
-         #print "Erreur: cette adresse IP $ip existe déjà\n";
+         #print "Error: this IP address $ip already exists\n";
          return 0 if $pool_ip eq $ip;
          }
       }
@@ -271,6 +274,9 @@ sub control_exist_ip {
    }
 
 #-------------------------------------------------------------------------------
+#Name: control_ip_in_range
+#Description: check if IP address is in the correct IP address range
+#             return 0 (if found) or 1 (if not found)
 
 sub control_ip_in_range {
    my ($computer_db, $sector, $ip) = @_;
@@ -291,7 +297,7 @@ sub control_ip_in_range {
 #-------------------------------------------------------------------------------------
 #Name: control_syntaxe_mac
 #Description: controls the syntax of a MAC address (just the length, not the values)
-#             return 0 (if found) or 1 (if not found)
+#             return 0 (false) ou 1 (true)
 
 sub control_syntax_mac_address {
    my $mac = shift;
@@ -307,7 +313,7 @@ sub control_syntax_mac_address {
 #-------------------------------------------------------------------------------------
 #Name: control_syntax_ip
 #Description: checks the syntax of an IP address (just the length, not the values)
-#             return 0 (if found) or 1 (if not found)
+#             return 0 (false) ou 1 (true)
 
 sub control_syntax_ip {
    my $ip = shift;
@@ -320,6 +326,9 @@ sub control_syntax_ip {
    }
 
 #-------------------------------------------------------------------------------------
+#Name: control_syntax_cidr
+#Description: checks the syntax of an CIDR IP range address range
+#             return 0 (false) ou 1 (true)
 
 sub control_syntax_cidr {
    my $cidr = shift;
@@ -330,6 +339,9 @@ sub control_syntax_cidr {
    }
 
 #-------------------------------------------------------------------------------------
+#Name: control_syntax_comment
+#Description: checks the syntax of a comment
+#             return 0 (false) ou 1 (true)
 
 sub control_syntax_comment {
    my $comment = shift;
@@ -1678,7 +1690,7 @@ sub del_float {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    if ( control_exist_mac($computer_db, $mac) == 1 ) {
-      print "Adresse MAC $mac non trouvée.\n";
+      print "MAC address $mac not found.\n";
       exit;
       }
 
@@ -1900,7 +1912,7 @@ sub cmd_create_pool {
          else {
             control_syntax_ip($ip) or next LOOP_ON_IP;
             if ( control_exist_ip($computer_db, $ip) == 0 ) {
-               print "L'adresse IP $ip existe déjà\n";
+               print "IP address $ip already exists\n";
                next;
                }
             push @ip_list, $ip;
@@ -2711,7 +2723,7 @@ sub cmd_generate_dhcp_file {
                print FILE_VLAN $buffer;
                }
             elsif ($address_type eq 'pool-dhcp') {
-               #--- Génère les fichiers pool dhcp ---#
+               #--- Generates dhcp pool files ---#
                for my $current_pool (keys %{$computer_db->{'pool'}}) {
                   next if $current_pool ne $ip;
 
@@ -2804,7 +2816,7 @@ sub cmd_generate_dns_file {
          }
 
       else {
-         #--- Création du fichier non-reverse ---#
+         #--- Creation of non-reverse file ---#
          open FILE_FORWARD_DNS, ">> $FOLDER_GEN_DNS/db.$sector_current.fwd";
          open FILE_REVERSE_DNS, ">> $FOLDER_GEN_DNS/db.$sector_current.rev";
 
@@ -2911,7 +2923,7 @@ sub cmd_generate_radius_file {
                print FILE_RADIUS $buffer;
                }
             elsif ($address_type eq 'pool-dhcp') {
-               #--- Génère les fichiers pool dhcp ---#
+               #--- Generates dhcp pool files ---#
                ALL_POOL:
                for my $current_pool (keys %{$computer_db->{'pool'}}) {
                   next ALL_POOL if $current_pool ne $ip;
@@ -3213,7 +3225,7 @@ sub load_data_pool {
             next;
             }
 
-         #--- cette partie teste si le pool existe.
+         #--- this part tests whether the pool exists.
          if (not exists $computer_db->{'pool'}{$pool}) {
             print "Error: create pool with create_pool command before load database: $pool\n";
             exit;
@@ -3377,7 +3389,7 @@ sub exit_on_error_option {
       print " -p : name of the DHCP pool. Example: pool-legi-priv\n";
       print " -s : sector attachment for the pool. (sector attachment must exist in file $COMPUTER_BASENAME.conf). Example: legi-sector03\n";
       print " -f : configuration filename on the DHCP server for the pool\n";
-      print " -i : adresse(s) IP ou plage d'IP. Séparateur d'adresses IP: ','. Séparateur de plage '-'\n";
+      print " -i : IP address(es) or IP range. IP address separator: ','. Range separator '-'\n";
       print "Examples:\n";
       print " ddt create-pool -p legi-pool1 -s legi-sector03 -f legi-pool-private -i 192.168.10.1,192.168.10.2,192.168.10.3\n";
       print " ddt create-pool -p legi-pool2 -s legi-sector03 -f legi-pool-public  -i 192.168.10.1-192.168.10.4\n";
