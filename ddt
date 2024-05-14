@@ -487,7 +487,7 @@ sub add_static {
    $mac = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_mac_address($mac)                         or exit;
+   control_syntax_mac_address($mac)                         or die "Error: bad MAC address syntax $mac\n";
    control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
    control_syntax_ip($ip)                                   or die "Error: bad IP syntax $ip\n";
    control_exist_ip($computer_db, $ip)                      or die "Error: IP $ip address already exist in sector $sector\n";
@@ -523,7 +523,7 @@ sub add_dhcp {
    $comment = normalize_comment($comment);
    control_exist_sector($computer_db, $sector)              or exit;
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_mac_address($mac)                         or exit;
+   control_syntax_mac_address($mac)                         or die "Error: bad MAC address syntax $mac\n";
    control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
    control_syntax_ip($ip)                                   or die "Error: bad IP syntax $ip\n";
    control_exist_ip($computer_db, $ip)                      or die "Error: IP address already exist in sector $sector: $ip.\n";
@@ -555,7 +555,7 @@ sub add_float {
    $mac = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
    control_exist_sector($computer_db, $sector)  or exit;
-   control_syntax_mac_address($mac)                   or exit;
+   control_syntax_mac_address($mac)                   or die "Error: bad MAC address syntax $mac\n";
    control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    control_exist_pool($computer_db, $pool)            or die "Error: the pool doesn't exists: $pool\n";
    control_syntax_comment($comment)                   or exit;
@@ -727,7 +727,7 @@ sub cmd_add_virtual {
    control_syntax_comment($comment)                         or exit;
 
    my $mac = join ':', 'FF', 'FF', map({sprintf("%02X", $_)} split(/\./, $ip));
-   control_syntax_mac_address($mac)       or exit;
+   control_syntax_mac_address($mac)       or die "Error: bad MAC address syntax $mac\n";
    control_exist_mac($computer_db, $mac)  or die "Error: virtual physical MAC address already exists: $mac\n";
 
    push @{$computer_db->{$sector}}, { $mac => {
@@ -776,7 +776,7 @@ sub cmd_add_radius {
 
    control_exist_sector($computer_db, $sector)              or exit;
    control_exist_hostname($computer_db, $sector, $hostname) or die "Error: host already exist in sector $sector: $hostname\n";
-   control_syntax_mac_address($mac)                         or exit;
+   control_syntax_mac_address($mac)                         or die "Error: bad MAC address syntax $mac\n";
    control_exist_mac($computer_db, $mac)                    or die "Error: physical MAC address already exists: $mac\n";
    control_syntax_comment($comment)                         or exit;
 
@@ -810,7 +810,7 @@ sub change_mac {
 
    $mac = normalize_mac_address($mac);
    control_exist_sector($computer_db, $sector)  or exit;
-   control_syntax_mac_address($mac)                   or exit;
+   control_syntax_mac_address($mac)                   or die "Error: bad MAC address syntax $mac\n";
    control_exist_mac($computer_db, $mac)              or die "Error: physical MAC address already exists: $mac\n";
    if ($ip ne '') {
       control_syntax_ip($ip) or die "Error: bad IP syntax $ip\n";
@@ -939,7 +939,7 @@ sub change_host {
       }
    else { # $mac ne ''
       $mac = normalize_mac_address($mac);
-      control_syntax_mac_address($mac) or die "Error: bad MAC Address syntax $mac\n";
+      control_syntax_mac_address($mac) or die "Error: bad MAC address syntax $mac\n";
       
       my @sectordb = @{$computer_db->{$sector}};
 
@@ -1063,7 +1063,7 @@ sub cmd_change_comment {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    control_exist_sector($computer_db, $sector)  or exit;
-   control_syntax_mac_address($mac)                   or exit;
+   control_syntax_mac_address($mac)                   or die "Error: bad MAC address syntax $mac\n";
    control_syntax_comment($comment)                   or exit;
 
    my @sectordb = @{$computer_db->{$sector}};
@@ -1108,7 +1108,7 @@ sub cmd_change_sector {
 
    control_exist_sector($computer_db, $sector)  or exit;
    control_syntax_ip($ip)                       or die "Error: bad IP syntax $ip\n";
-   control_syntax_mac_address($mac)             or exit;
+   control_syntax_mac_address($mac)             or die "Error: bad MAC address syntax $mac\n";
 
    LOOP_ON_SECTOR:
    for my $sector_current (keys %{$computer_db}) {
@@ -1182,7 +1182,7 @@ sub cmd_change_tag {
 
    $mac = get_mac_from_ip($computer_db, $sector, $ip, $mac)             if $ip ne '';
    $mac = get_mac_from_hostname($computer_db, $sector, $hostname, $mac) if $hostname ne '';
-   control_syntax_mac_address($mac) or exit;
+   control_syntax_mac_address($mac) or die "Error: bad MAC address syntax $mac\n";
 
    LOOP_ON_COMPUTER:
    for my $computer (@{$computer_db->{$sector}}) {
@@ -2460,7 +2460,7 @@ sub cmd_search_mac {
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   control_syntax_mac_address($mac) or exit;
+   control_syntax_mac_address($mac) or die "Error: bad MAC address syntax $mac\n";
 
    LOOP_ON_SECTOR:
    for my $sector_current (keys %{$computer_db}) {
