@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.13');
+use version; our $VERSION = version->declare('0.14.14');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -379,7 +379,7 @@ sub normalize_mac_address {
       return join q{:}, unpack('(A2)*', uc($mac_address));
       }
 
-   return join q{:}, map { substr( uc("00$_"), -2) } split m/ [:-] /xms, $mac_address;
+   return join q{:}, map { substr( uc("$_"), -2) } split m/ [:-] /xms, $mac_address;
    }
 
 #-------------------------------------------------------------------------------
