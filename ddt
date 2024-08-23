@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.14');
+use version; our $VERSION = version->declare('0.14.15');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2340,6 +2340,7 @@ sub cmd_show_tag {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    printf "%-12s %s\n", 'TAG', 'Comment' if not $no_header;
+   printf "%-12s %s\n", 'universal', '2006-01-01 internal tag if no tag defined (SYSTEM)';
    LOOP_ON_TAG:
    for my $tag ( keys %{$computer_db->{'tag'}} ) {
       my $comment = $computer_db->{'tag'}{$tag}{'comment'};
@@ -3937,6 +3938,9 @@ The C<universal> tag cannot be deleted.
 This command lists all the tags that can be assigned to a computer via the L<change-tag> command.
 
  ddt show-tag [--no-header|-H]
+
+The tag with the name C<universal> exists intrinsically.
+It cannot be destroyed. It's useful if you don't declare a tag for a machine.
 
 =head2 version
 
