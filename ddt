@@ -2340,7 +2340,7 @@ sub cmd_show_tag {
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
    printf "%-12s %s\n", 'TAG', 'Comment' if not $no_header;
-   printf "%-12s %s\n", 'universal', '2006-01-01 internal tag if no user-defined tag (INTRINSIC)';
+   printf "%-12s %s\n", 'universal', '2006-01-01 Internal tag used by default (INTRINSIC)';
    LOOP_ON_TAG:
    for my $tag ( keys %{$computer_db->{'tag'}} ) {
       my $comment = $computer_db->{'tag'}{$tag}{'comment'};
