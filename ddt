@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.16');
+use version; our $VERSION = version->declare('0.14.17');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2610,7 +2610,7 @@ sub cmd_show_host {
       my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
 
       my $comment =$ipdb{$ip}->{'comment'};
-      $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
+      #$comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
 
       my $enable = $ipdb{$ip}->{'enabled'};
       if (exists $ipdb{$ip}->{'pxe_config'}) {
