@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.15');
+use version; our $VERSION = version->declare('0.14.16');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2577,7 +2577,7 @@ sub cmd_show_host {
          my $date = sprintf '%04i-%02i-%02i', $year, $mon, $mday;
 
          my $comment = normalize_comment($attribute->{'comment'});
-         $comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
+         #$comment =~ s/^\d\d\d\d-\d\d-\d\d\s//;
 
          my $enable = $attribute->{'enabled'};
          if (exists $attribute->{'pxe_config'}) {
