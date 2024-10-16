@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.17');
+use version; our $VERSION = version->declare('0.14.18');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2587,7 +2587,7 @@ sub cmd_show_host {
             $enable .= ':' . $attribute->{'tag'};
             }
 
-         #printf "%-30s  %-20s %17s %9s %3s %10s %s\n",
+         #printf "%-30s  %-20s %17s %9s %3s %10s~%s\n",
          $tb_computer->add(
             $attribute->{'hostname'} . '.' . $sector_current,
             $ip,
@@ -2620,7 +2620,7 @@ sub cmd_show_host {
          $enable .= ':' . $ipdb{$ip}->{'tag'};
          }
 
-      #printf "%-30s %-20s %17s %9s %3s %10s %s\n",
+      #printf "%-30s %-20s %17s %9s %3s %10s~%s\n",
       $tb_computer->add(
          $ipdb{$ip}->{'hostname'} . '.' . $ipdb{$ip}->{'sector'},
          $ip,
