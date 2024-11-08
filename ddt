@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.18');
+use version; our $VERSION = version->declare('0.14.19');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1782,21 +1782,24 @@ sub cmd_create_sector {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($sector, $dns_extension, $comment);
+   my ($sector, $dns_extension, $vlan, $comment);
 
    GetOptions(
       'sector|s|d=s'       => \$sector,
       'dns-extension|e=s'  => \$dns_extension,
+      'vlan|l=s'           => \$vlan,
       'comment|c=s'        => \$comment,
       );
 
    exit_on_error_option($help)
       if $sector        eq ''
       or $dns_extension eq ''
+      or $vlan          eq ''
       or $comment       eq '';
 
    $sector =~ m{^[\w\d]}            or die "Error: sector $sector must begin by a letter or a digit\n";
    $sector =~ m{^[\w\d][\w\d-_]*$}  or die "Error: sector $sector must only use letter digit dash and underscore character\n";
+   $vlan   =~ m{^\d+$}              or die "Error: vlan $vlan must be numerical\n";
 
    $comment = normalize_comment($comment);
 
@@ -1810,6 +1813,7 @@ sub cmd_create_sector {
    my $timestamp = time;
    $computer_db->{'dset'}{$sector} = {
       'dns_extension'   => $dns_extension,
+      'vlan'            => $vlan,
       'comment'         => $comment,
       'create_time'     => $timestamp,
       'modify_time'     => $timestamp,
@@ -2411,6 +2415,8 @@ sub cmd_show_sector {
      {is_sep => 1,        body        => '  '},
      {align  => 'left',   align_title => 'left',   title => 'DNS-Extension'},
      {is_sep => 1,        body        => '  '},
+     {align  => 'left',   align_title => 'left',   title => 'VLAN'},
+     {is_sep => 1,        body        => '  '},
      {align  => 'left',   align_title => 'left',   title => 'IP-Range'},
      {align  => 'left',   align_title => 'left',   title => 'Date'},
      {align  => 'left',   align_title => 'left',   title => 'Comment'},
@@ -2442,6 +2448,7 @@ sub cmd_show_sector {
 
       $tb_computer->add($sector_current,
          $computer_db->{'dset'}{$sector_current}{'dns_extension'},
+         $computer_db->{'dset'}{$sector_current}{'vlan'},
          $ip_range,
          $date,
          $comment,
@@ -3379,10 +3386,11 @@ sub exit_on_error_option {
    elsif ($command eq 'create-sector') {
       print "List of options for command: $command\n";
       print " -s : new sector (mandatory)\n";
-      print " -e : DNS domain name extension( mandatory). Example legi.grenoble-inp.fr\n";
+      print " -e : DNS domain name extension (mandatory). Example legi.grenoble-inp.fr\n";
+      print " -l : VLAN\n";
       print " -c : comment (mandatory). Example: 2016-08-22 VLAN legi-261 (INFO)\n";
       print "Examples:\n";
-      print " ddt create-sector -s legi-sector03 -e legi.grenoble-inp.fr -c '2016-08-22 VLAN legi-261 (INFO)'\n";
+      print " ddt create-sector -s legi-sector03 -e legi.grenoble-inp.fr -l 92 -c '2016-08-22 VLAN legi-261 (INFO)'\n";
       }
 
    elsif ($command eq 'create-pool') {
