@@ -2546,6 +2546,7 @@ sub cmd_show_host {
      {align  => 'right',  align_title => 'right',  title => 'Status'},
      {is_sep => 1,        body        => '  '},
      {align  => 'left',   align_title => 'left',   title => 'Date'},
+     {is_sep => 1,        body        => '~'},
      {align  => 'left',   align_title => 'left',   title => 'Comment'},
      );
 
