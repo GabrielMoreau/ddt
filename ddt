@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.20');
+use version; our $VERSION = version->declare('0.14.21');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1059,24 +1059,33 @@ sub cmd_change_comment {
    my ($sector, $mac, $comment);
 
    GetOptions(
+      'hostname|h=s'    => \$hostname,
       'sector|s|d=s'    => \$sector,
+      'ip|i=s'          => \$ip,
       'mac|m=s'         => \$mac,
       'comment|c=s'     => \$comment,
       );
 
+   ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $sector  eq ''
-      or $mac        eq ''
       or $comment    eq '';
+   exit_on_error_option($help)
+      if $mac        eq ''
+      and $hostname  eq ''
+      and $ip        eq '';
 
    $mac     = normalize_mac_address($mac);
    $comment = normalize_comment($comment);
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
 
-   control_exist_sector($computer_db, $sector)  or exit;
-   control_syntax_mac_address($mac)                   or die "Error: bad MAC address syntax $mac\n";
-   control_syntax_comment($comment)                   or exit;
+   control_exist_sector($computer_db, $sector) or exit;
+
+   $mac = get_mac_from_ip($computer_db, $sector, $ip, $mac)             if $ip ne '';
+   $mac = get_mac_from_hostname($computer_db, $sector, $hostname, $mac) if $hostname ne '';
+   control_syntax_mac_address($mac) or die "Error: bad MAC address syntax $mac\n";
+   control_syntax_comment($comment) or exit;
 
    my @sectordb = @{$computer_db->{$sector}};
 
@@ -3471,8 +3480,10 @@ sub exit_on_error_option {
 
    elsif ($command eq 'change-comment') {
       print "List of options for command: $command\n";
+      print " -h : computer hostname (mandatory unless option -i or -m)\n";
       print " -s : sector attachment (mandatory). Example: -s legi-sector03\n";
-      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
+      print " -i : internet IP address (mandatory unless option -h or -m)\n";
+      print " -m : physical MAC address (mandatory unless option -h or -i, priority). Example: -m 0F:58:AB:2A:22:11\n";
       print " -c : new comment (mandatory)\n";
       }
 
