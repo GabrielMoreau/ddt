@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.25');
+use version; our $VERSION = version->declare('0.14.26');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2489,11 +2489,12 @@ sub cmd_search {
       if $hostname   eq ''
       and $mac       eq '';
 
-   $mac = normalize_mac_address($mac);
+   if ($mac ne '') {
+      $mac = normalize_mac_address($mac);
+      control_syntax_mac_address($mac) or die "Error: bad MAC address syntax $mac\n";
+   }
 
    my $computer_db = ipamdb_load($COMPUTER_YAML);
-
-   control_syntax_mac_address($mac) or die "Error: bad MAC address syntax $mac\n";
 
    LOOP_ON_SECTOR:
    for my $sector_current (keys %{$computer_db}) {
