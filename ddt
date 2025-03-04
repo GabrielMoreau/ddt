@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.24');
+use version; our $VERSION = version->declare('0.14.25');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2487,7 +2487,7 @@ sub cmd_search {
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      or $mac        eq '';
+      and $mac       eq '';
 
    $mac = normalize_mac_address($mac);
 
