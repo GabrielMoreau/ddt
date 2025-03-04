@@ -13,7 +13,7 @@ pages:
     - mkdir -p public/download
     - $(wget --no-check-certificate ${CI_PAGES_URL}/download.tar.gz -O download.tar.gz || exit 0)
     - '[ -s download.tar.gz ] && tar -xzf download.tar.gz public/download/'
-    - ls -t public/ddt_*.deb 2> /dev/null | tail -n +$((${KEEP_PKG} + 1)) | xargs -r rm -f
+    - (cd public/download; ls -t ddt_*.deb 2> /dev/null | tail -n +$((${KEEP_PKG} + 1)) | xargs -r rm -f)
     - make pages
     - (cd public/download; ../../only-keep-1pkg-day | bash)
     - tar -czf public/download.tar.gz public/download/
