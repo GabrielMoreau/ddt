@@ -2,7 +2,7 @@
 
 export LANG=C
 
-for search in '*.deb'
+for search in 'ddt_*.deb'
 do
 	# Find all files, sort by date
 	# and keep only the most recent for each day
