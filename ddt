@@ -70,7 +70,7 @@ my %cmd_db = (
    'load-database'      => \&cmd_load_database,
    'remove-pxe'         => \&cmd_remove_pxe,
    'remove-tag'         => \&cmd_remove_tag,
-   'search-mac'         => \&cmd_search_mac,
+   'search'             => \&cmd_search,
    'sector-add-ip'      => \&cmd_sector_add_ip,
    'show'               => \&cmd_show_host,
    'show-sector'        => \&cmd_show_sector,
@@ -2472,18 +2472,22 @@ sub cmd_show_sector {
 
 #--------------------------------------------------------------------------------
 
-sub cmd_search_mac {
+sub cmd_search {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($mac);
+   my ($hostname, $sector, $mac);
 
    GetOptions(
-      'mac|m=s' => \$mac,
+      'hostname|h=s' => \$hostname,
+      'sector|s|d=s' => \$sector,
+      'mac|m=s'      => \$mac,
       );
 
+   ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
-      if $mac eq '';
+      if $hostname   eq ''
+      or $mac        eq '';
 
    $mac = normalize_mac_address($mac);
 
@@ -2499,13 +2503,16 @@ sub cmd_search_mac {
       next if $sector_current eq 'tag';
       next if $sector_current eq 'version';
 
+      next LOOP_ON_SECTOR if $sector ne '' and $sector ne $sector_current;
+
       my @sectordb = @{$computer_db->{$sector_current}};
 
       LOOP_ON_COMPUTER:
       for my $computer (@sectordb) {
          my ($mac_address, $attribute) = %{$computer};
 
-         next LOOP_ON_COMPUTER if $mac_address ne $mac;
+         next LOOP_ON_COMPUTER if $hostname ne '' and $attribute->{'hostname'} !~ m/$hostname/i;
+         next LOOP_ON_COMPUTER if $mac      ne '' and $mac_address ne $mac;
 
          my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
          $year += 1900;
@@ -3562,9 +3569,11 @@ sub exit_on_error_option {
       print " -p : name of the DHCP pool\n";
       }
 
-   elsif ($command eq 'search-mac') {
+   elsif ($command eq 'search') {
       print "List of options for command: $command\n";
-      print " -m : physical MAC address (mandatory). Example: -m 0F:58:AB:2A:22:11\n";
+      print " -h : computer hostname (mandatory unless option -m)\n";
+      print " -s : sector attachment\n";
+      print " -m : physical MAC address (mandatory unless option -h). Example: -m 0F:58:AB:2A:22:11\n";
       }
 
    elsif ($command eq 'sector-add-ip') {
@@ -3638,7 +3647,7 @@ ddt - management of computer names and IP addresses
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
- ddt search-mac [--mac|-m mac]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac]
  ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
@@ -3682,7 +3691,7 @@ COMMANDS
  * load-database     : load the YAML database (be careful)
  * remove-pxe        : remove a PXE/BOOTP configuration
  * remove-tag        : remove a TAG
- * search-mac        : search physical MAC address computer
+ * search        : search physical MAC address computer
  * sector-add-ip     : add IP range check on a sector
  * show-sector       : list all sector group of computer
  * show              : list all computers
@@ -3741,7 +3750,7 @@ ddt - management of computer names and IP addresses
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
- ddt search-mac [--mac|-m mac]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac]
  ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
@@ -3929,9 +3938,9 @@ The C<universal> tag cannot be deleted.
 
  ddt remove-tag [--tag|-t tag]
 
-=head2 search-mac
+=head2 search
 
- ddt search-mac [--mac|-m mac]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac]
 
 =head2 sector-add-ip
 
