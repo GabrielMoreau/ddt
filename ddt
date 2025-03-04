@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.26');
+use version; our $VERSION = version->declare('0.14.27');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2476,18 +2476,22 @@ sub cmd_search {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($hostname, $sector, $mac);
+   my ($hostname, $sector, $ip, $mac, $comment);
 
    GetOptions(
       'hostname|h=s' => \$hostname,
       'sector|s|d=s' => \$sector,
+      'ip|i=s'       => \$ip,
       'mac|m=s'      => \$mac,
+      'comment|c=s'  => \$comment,
       );
 
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
    exit_on_error_option($help)
       if $hostname   eq ''
-      and $mac       eq '';
+      and $ip        eq ''
+      and $mac       eq ''
+      and $comment   eq '';
 
    if ($mac ne '') {
       $mac = normalize_mac_address($mac);
@@ -2513,7 +2517,9 @@ sub cmd_search {
          my ($mac_address, $attribute) = %{$computer};
 
          next LOOP_ON_COMPUTER if $hostname ne '' and $attribute->{'hostname'} !~ m/$hostname/i;
-         next LOOP_ON_COMPUTER if $mac      ne '' and $mac_address ne $mac;
+         next LOOP_ON_COMPUTER if $ip       ne '' and $attribute->{'ip'}       ne $ip;
+         next LOOP_ON_COMPUTER if $mac      ne '' and $mac_address             ne $mac;
+         next LOOP_ON_COMPUTER if $comment  ne '' and $attribute->{'comment'}  !~  m/$comment/i;
 
          my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
          $year += 1900;
@@ -3648,7 +3654,7 @@ ddt - management of computer names and IP addresses
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
- ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
@@ -3751,7 +3757,7 @@ ddt - management of computer names and IP addresses
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
- ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
@@ -3941,7 +3947,12 @@ The C<universal> tag cannot be deleted.
 
 =head2 search
 
- ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac]
+When the sector option is set, the search is restricted to this sector only.
+The search on the IP address or mac physical address is performed by an exact match (equality).
+The hostname or comment search is performed by regex match insensitive to character case.
+It's therefore a partial (non-exact) search that can return several results
+
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
 
 =head2 sector-add-ip
 
