@@ -7,12 +7,15 @@ before_script:
 
 pages:
   stage: build
+  variables:
+    KEEP_PKG: 50
   script:
     - mkdir -p public/download
     - $(wget --no-check-certificate ${CI_PAGES_URL}/download.tar.gz -O download.tar.gz || exit 0)
     - '[ -s download.tar.gz ] && tar -xzf download.tar.gz public/download/'
-    - '[ -s public/download/ddt_0.9.4-1_all.deb ] || (cd public/download; wget http://servforge.legi.grenoble-inp.fr/pub/soft-trokata/ddt/download/ddt_0.9.4-1_all.deb || exit 0)'
+    - ls -t public/ddt_*.deb 2> /dev/null | tail -n +$((${KEEP_PKG} + 1)) | xargs -r rm -f
     - make pages
+    - (cd public/download; ../../only-keep-1pkg-day | bash)
     - tar -czf public/download.tar.gz public/download/
   artifacts:
     paths:
