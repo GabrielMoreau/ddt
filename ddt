@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.22');
+use version; our $VERSION = version->declare('0.14.23');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1056,7 +1056,7 @@ sub cmd_change_comment {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($hostname, $sector, $mac, $comment);
+   my ($hostname, $sector, $ip, $mac, $comment);
 
    GetOptions(
       'hostname|h=s'    => \$hostname,
