@@ -42,7 +42,8 @@ pages: all pkg
 	cp -p *.html       public/
 	cp -p podstyle.css public/
 	cp -p LICENSE.txt  public/
-	cp -p --no-clobber ddt_*_all.deb  public/download/
+	cp -p --no-clobber ddt_*_all.deb public/download/
+	(cd public/download; ../../only-keep-1pkg-day; ../../only-keep-1pkg-day | bash)
 	cd public; ln -sf ddt.html index.html
 	echo '<html><body><h1>DDT Debian Package</h1><ul>' > public/download/index.html
 	(cd public/download; while read file; do printf '<li><a href="%s">%s</a> (%s)</li>\n' $$file $$file $$(stat -c %y $$file | cut -f 1 -d ' '); done < <(ls -1t *.deb) >> index.html)
