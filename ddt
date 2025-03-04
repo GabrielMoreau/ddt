@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.23');
+use version; our $VERSION = version->declare('0.14.24');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -3619,7 +3619,7 @@ ddt - management of computer names and IP addresses
  ddt add-radius [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
- ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt change-comment [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt change-sector [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-host [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
@@ -3722,7 +3722,7 @@ ddt - management of computer names and IP addresses
  ddt add-radius [--hostname|-h hostname] [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
  ddt add-static [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt add-virtual [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--comment|-c comment]
- ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt change-comment [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
  ddt change-sector [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-host [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac]
  ddt change-ip [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip]
@@ -3809,7 +3809,7 @@ only DNS.
 
 =head2 change-comment
 
- ddt change-comment [--sector|-s|-d sector] [--mac|-m mac] [--comment|-c comment]
+ ddt change-comment [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
 
 =head2 change-sector
 
