@@ -1,5 +1,5 @@
 ---
-image: amd64/debian:stable
+image: amd64/debian:stable-slim
 
 cache:
   key: package-cache-folder
