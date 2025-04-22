@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.27');
+use version; our $VERSION = version->declare('0.14.28');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2476,7 +2476,7 @@ sub cmd_search {
    local @ARGV = @_;
 
    my $help = get_cmd_name();
-   my ($hostname, $sector, $ip, $mac, $comment);
+   my ($hostname, $sector, $ip, $mac, $comment, $regex);
 
    GetOptions(
       'hostname|h=s' => \$hostname,
@@ -2484,6 +2484,7 @@ sub cmd_search {
       'ip|i=s'       => \$ip,
       'mac|m=s'      => \$mac,
       'comment|c=s'  => \$comment,
+      'regex|r=s'    => \$regex,
       );
 
    ($hostname, $sector) = split /\./, $hostname, 2 if $hostname =~ m/\./;
@@ -2491,7 +2492,8 @@ sub cmd_search {
       if $hostname   eq ''
       and $ip        eq ''
       and $mac       eq ''
-      and $comment   eq '';
+      and $comment   eq ''
+      and $regex     eq '';
 
    if ($mac ne '') {
       $mac = normalize_mac_address($mac);
@@ -2519,7 +2521,16 @@ sub cmd_search {
          next LOOP_ON_COMPUTER if $hostname ne '' and $attribute->{'hostname'} !~ m/$hostname/i;
          next LOOP_ON_COMPUTER if $ip       ne '' and $attribute->{'ip'}       ne $ip;
          next LOOP_ON_COMPUTER if $mac      ne '' and $mac_address             ne $mac;
-         next LOOP_ON_COMPUTER if $comment  ne '' and $attribute->{'comment'}  !~  m/$comment/i;
+         next LOOP_ON_COMPUTER if $comment  ne '' and $attribute->{'comment'}  !~ m/$comment/i;
+         next LOOP_ON_COMPUTER if $regex    ne '' and 
+            (  $attribute->{'hostname'}     !~ m/$regex/i
+            or $attribute->{'ip'}           !~ m/$regex/i
+            or $mac_address                 !~ m/$regex/i
+            or $attribute->{'comment'}      !~ m/$regex/i
+            or $attribute->{'pxe_config'}   !~ m/$regex/i
+            or $attribute->{'tag'}          !~ m/$regex/i
+            or $attribute->{'address_type'} !~ m/$regex/i
+            );
 
          my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
          $year += 1900;
@@ -3581,6 +3592,7 @@ sub exit_on_error_option {
       print " -h : computer hostname (mandatory unless option -m)\n";
       print " -s : sector attachment\n";
       print " -m : physical MAC address (mandatory unless option -h). Example: -m 0F:58:AB:2A:22:11\n";
+      print " -r : regex search on all attributes\n";
       }
 
    elsif ($command eq 'sector-add-ip') {
@@ -3654,7 +3666,7 @@ ddt - management of computer names and IP addresses
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
- ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment] [--regex|-r regex]
  ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
@@ -3698,7 +3710,7 @@ COMMANDS
  * load-database     : load the YAML database (be careful)
  * remove-pxe        : remove a PXE/BOOTP configuration
  * remove-tag        : remove a TAG
- * search        : search physical MAC address computer
+ * search            : search computer
  * sector-add-ip     : add IP range check on a sector
  * show-sector       : list all sector group of computer
  * show              : list all computers
@@ -3757,7 +3769,7 @@ ddt - management of computer names and IP addresses
  ddt load-database [--sector|-s|-d sector] [--filename|-f filename] [--kind|-k kind]
  ddt remove-pxe [--bootp|-b pxe_config]
  ddt remove-tag [--tag|-t tag]
- ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment] [--regex|-r regex]
  ddt sector-add-ip [--sector|-s|-d sector] [--ip-range|-i ip_cidr] 
  ddt show-sector [--no-header|-H]
  ddt show
@@ -3952,7 +3964,7 @@ The search on the IP address or mac physical address is performed by an exact ma
 The hostname or comment search is performed by regex match insensitive to character case.
 It's therefore a partial (non-exact) search that can return several results
 
- ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment]
+ ddt search [--hostname|-h hostname] [--sector|-s|-d sector] [--ip|-i ip] [--mac|-m mac] [--comment|-c comment] [--regex|-r regex]
 
 =head2 sector-add-ip
 
