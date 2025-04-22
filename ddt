@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.28');
+use version; our $VERSION = version->declare('0.14.29');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -2522,14 +2522,14 @@ sub cmd_search {
          next LOOP_ON_COMPUTER if $ip       ne '' and $attribute->{'ip'}       ne $ip;
          next LOOP_ON_COMPUTER if $mac      ne '' and $mac_address             ne $mac;
          next LOOP_ON_COMPUTER if $comment  ne '' and $attribute->{'comment'}  !~ m/$comment/i;
-         next LOOP_ON_COMPUTER if $regex    ne '' and 
-            (  $attribute->{'hostname'}     !~ m/$regex/i
-            or $attribute->{'ip'}           !~ m/$regex/i
-            or $mac_address                 !~ m/$regex/i
-            or $attribute->{'comment'}      !~ m/$regex/i
-            or $attribute->{'pxe_config'}   !~ m/$regex/i
-            or $attribute->{'tag'}          !~ m/$regex/i
-            or $attribute->{'address_type'} !~ m/$regex/i
+         next LOOP_ON_COMPUTER if $regex    ne '' and not
+            (  $attribute->{'hostname'}     =~ m/$regex/i
+            or $attribute->{'ip'}           =~ m/$regex/i
+            or $mac_address                 =~ m/$regex/i
+            or $attribute->{'comment'}      =~ m/$regex/i
+            or $attribute->{'pxe_config'}   =~ m/$regex/i
+            or $attribute->{'tag'}          =~ m/$regex/i
+            or $attribute->{'address_type'} =~ m/$regex/i
             );
 
          my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime $attribute->{'modify_time'};
