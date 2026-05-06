@@ -20,7 +20,7 @@ package main;
 
 use strict;
 #use warnings;
-use version; our $VERSION = version->declare('0.14.29');
+use version; our $VERSION = version->declare('0.14.30');
 
 use Getopt::Long qw(GetOptions);
 #use YAML;
@@ -1153,6 +1153,7 @@ sub cmd_change_sector {
          push @{$computer_db->{$sector}}, { $mac => $attribute };
 
          ipamdb_save("$COMPUTER_YAML", $computer_db);
+         print "Info: update host MAC $mac IP $ip sector $sector [OK]\n";
          exit;
          }
       }
